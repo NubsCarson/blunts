@@ -246,8 +246,13 @@ host's secret manager and grant the deployment identity scoped access.
   organization account, role access, bundle/package ownership and signing assets.
 - Hosting/managed PostgreSQL/backup/monitoring accounts and production budget.
 
-The proposed provider credentials are not consumed by this code yet. Adding
-`MOONPAY_*` or `DINARI_*` variables alone does nothing. The first-party auth settings above are consumed by this implementation.
+Provider credentials do not enable financial execution. `DINARI_API_KEY_ID` and
+`DINARI_API_SECRET_KEY` are consumed only by the read-only sandbox qualifier:
+`npm run providers:check`. It checks the authenticated partner and requested QQQ
+instrument through the official SDK, makes no mutations, and never reports live
+acceptance. Missing configuration exits 2 without network requests. Real orders,
+funding and settlement remain unimplemented. No MoonPay credentials are consumed
+yet. The first-party auth settings above are consumed by the application.
 
 ### Product and provider gates
 

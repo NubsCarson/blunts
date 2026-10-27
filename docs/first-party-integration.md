@@ -144,3 +144,21 @@ Testing must cover a complete eligible sandbox cycle and distributed failure
 windows before any authorized live pilot. Until then, this application's login
 and wallet integration is independently usable, but its investing objective
 remains incomplete. No new provider account or agreement was created/accepted.
+
+The selected engineering path is the existing Dinari/MoonPay candidate from
+Shaw's repository. Dinari's official `@dinari/api-sdk` is pinned to 0.15.0.
+`npm run providers:check` performs a read-only sandbox qualification using
+`DINARI_API_KEY_ID` and `DINARI_API_SECRET_KEY` from the process environment.
+It makes at most two GET requests: partner identity and a QQQ-filtered instrument
+query. It rejects non-partner identities and malformed/duplicate instrument
+responses, and checks tradability, fractional support and an Arbitrum Sepolia
+token mapping. These checks do not establish customer eligibility, production
+support, fee approval, funding acceptance, or successful orders/settlement.
+
+The endpoint is pinned to Dinari's sandbox even if `DINARI_BASE_URL` is set;
+redirects, automatic retries and SDK logging are disabled. The output contains
+classifications rather than raw errors, secrets, partner identities or account
+records. Without credentials it exits 2 and makes no requests. The transport
+tests exercise the real official SDK against synthetic responses; an enabled
+partner sandbox remains necessary for actual provider acceptance. This operator
+command is not exposed as a browser endpoint and does not switch `MONEY_MODE`.
