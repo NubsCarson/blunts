@@ -11,6 +11,7 @@ import { AmountPicker } from "./AmountPicker";
 import { CashOut } from "./CashOut";
 import { BanknoteArrowDown } from "lucide-react";
 import { StewardLogin } from "./StewardLogin";
+import { HowItWorks } from "./HowItWorks";
 import { request, native, shareStatement, onResume, onBack } from "./platform";
 type Intent = {
   id: string;
@@ -1120,15 +1121,7 @@ function App() {
             </button>
           </div>
         ) : menuPage === "how" ? (
-          <div className="menu-how">
-            <p>
-              Fill adds demo funds and invests. Spark sells into available demo
-              cash. Choose Cash out to send that cash to a test destination.
-            </p>
-            <p>One blunt represents $100 invested. Ten blunts make a band.</p>
-            <p>This version uses simulated money and investments.</p>
-            <button onClick={() => setMenuPage("menu")}>Back to menu</button>
-          </div>
+          <HowItWorks onDone={() => setHelp(false)} />
         ) : (
           <>
             <button className="quiet" onClick={() => setMenuPage("menu")}>

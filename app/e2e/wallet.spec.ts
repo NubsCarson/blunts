@@ -1,5 +1,65 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+
+test("original five-step walkthrough explains fees, demo ownership and cash-out", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("button", { name: "HOW IT WORKS", exact: true }).click();
+  const walkthrough = page.getByRole("region", {
+    name: "How it works walkthrough",
+  });
+  await expect(
+    walkthrough.getByRole("heading", { name: "Fill it up.", exact: true }),
+  ).toBeVisible();
+  await expect(
+    walkthrough.getByRole("button", { name: "Back", exact: true }),
+  ).toBeDisabled();
+  await expect(walkthrough).toContainText("$24.75 invested");
+  await walkthrough.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(walkthrough).toContainText("10 blunts. One band.");
+  await page.keyboard.press("ArrowLeft");
+  await expect(walkthrough).toContainText("Fill it up.");
+  const art = await walkthrough.locator(".how-art").boundingBox();
+  expect(art).not.toBeNull();
+  await page.mouse.move(art!.x + art!.width - 24, art!.y + art!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(art!.x + 24, art!.y + art!.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(walkthrough).toContainText("10 blunts. One band.");
+  await walkthrough.getByRole("button", { name: "Back", exact: true }).click();
+  await walkthrough.getByRole("button", { name: "Next", exact: true }).click();
+  await walkthrough.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(walkthrough).toContainText("not real ETF shares");
+  await walkthrough.getByText("What is an ETF?", { exact: true }).click();
+  await expect(
+    walkthrough.getByText("Blunts does not currently buy that security.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await walkthrough.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(walkthrough).toContainText("Real investments can lose value");
+  await walkthrough.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(walkthrough).toContainText("press Spark again to cash out");
+  await expect(walkthrough).toContainText("5 of 5");
+  const scan = await new AxeBuilder({ page }).analyze();
+  expect(
+    scan.violations.filter((v) =>
+      ["serious", "critical"].includes(v.impact ?? ""),
+    ),
+  ).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath("how-it-works.png") });
+  await walkthrough
+    .getByRole("button", { name: "Got it", exact: true })
+    .click();
+  await expect(walkthrough).not.toBeVisible();
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("button", { name: "HOW IT WORKS", exact: true }).click();
+  await expect(walkthrough).toContainText("1 of 5");
+});
+
 async function signup(page: Page) {
   await page.goto("/");
   await page

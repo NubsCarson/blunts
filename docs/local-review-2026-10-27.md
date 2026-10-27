@@ -44,6 +44,10 @@ Upstream has no open issues or pull requests as observed on October 27.
   require the demo password again without saving it, or a verified first-party session. Retry the same instruction,
   including after provider acceptance with a lost response.
 - Preserve the two-action tray: Spark opens cash-out when only cash remains.
+- Restore the prototype's five-step walkthrough, with back/next, swipe and
+  keyboard navigation, ETF explanation, current demo fee arithmetic, value-to-band
+  units, loss-risk explanation and a precise Spark/payout distinction. Historical
+  performance claims and the superseded profit fee are not presented as current.
 - Replace the ambiguous dotted Fill mark with the same Lucide BanknoteArrowDown icon on both controls.
 - Validate malformed and excessive Fill/Spark amounts while the sheet is open.
 - Connect Cloud/direct Steward email sign-in, TOTP/SMS continuation, wallet provisioning, encrypted server-side tokens, issuer/subject binding, refresh leases and sign-out.
@@ -75,6 +79,12 @@ does not specify a repository license.
 
 - 23 backend tests passed with actual isolated PostgreSQL 17.10 and the real local Steward service; no skips. The session-root controls verify restart stability, restrictive permissions, symlink refusal and preservation of rejected files.
 - The full browser suite passed 16 cases, with two intentional engine skips for the desktop-only full-motion scenario. After restoring cash-out behind Spark, its recovery case passed on all three engines.
+- The restored walkthrough separately passed on desktop Chromium, mobile Chromium
+  and WebKit: button/keyboard/swipe navigation, first/last bounds, fee examples,
+  ETF details, risk and payout explanation, completion/reset and serious/critical
+  accessibility checks. The web build and both native development builds passed
+  again with the walkthrough included. Screenshots and build logs are under the
+  ignored `data/review-20261027/tutorial-*` evidence paths.
 - TypeScript/Vite build, formatting, dependency audit, 13 Python tests, six historical prototype tests and deterministic model comparison passed.
 - Android debug and iOS simulator builds passed. A fresh iOS 27 simulator completed native email-code sign-in, onboarding and Fill; its session and $24.75 balance survived process termination/relaunch. The same native session completed Spark, test-destination creation and cash-out to zero; screenshots are retained in the ignored evidence directory. These are not physical-device/store tests.
 - The container completed an actual HTTP Fill/Spark/payout simulation with four completed intents and zero ending balances. Its live-money startup refusal was verified. The PGlite-only container fixture required a 1536 MiB limit; the first 512 MiB attempt was killed by the container memory limit. Hosted deployments should use server Postgres as documented.

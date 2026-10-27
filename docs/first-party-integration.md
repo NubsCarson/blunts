@@ -127,3 +127,20 @@ Neither Cloud credits nor a wallet address are treated as an investment balance.
 orders, settlement, payouts, documents and reconciliation require an actual
 investment/payment provider and its accepted account/program. Selecting Cloud
 for identity and hosting does not fill that missing service boundary.
+
+Provider-document recheck on October 27 confirmed the remaining access boundary:
+[Dinari's US program](https://docs.dinari.com/docs/us) requires partner
+verification/agreement, approved UI, customer onboarding and API v2 access.
+[MoonPay's on-ramp setup](https://dev.moonpay.com/widget/on-ramp/overview)
+requires its account/API keys and has a separate sandbox flow. No such enabled
+Blunts projects have been supplied; the owner confirmed they do not currently
+have these projects. Steward/Cloud ownership does not establish either service.
+
+Once an actual provider/program is selected and enabled, the next implementation
+must replace the simulator with provider-backed account enrollment, authoritative
+quotes, user-approved orders, funding/payout status, documents and reconciliation.
+The owning code is still unfinished, not merely waiting for environment values.
+Testing must cover a complete eligible sandbox cycle and distributed failure
+windows before any authorized live pilot. Until then, this application's login
+and wallet integration is independently usable, but its investing objective
+remains incomplete. No new provider account or agreement was created/accepted.
