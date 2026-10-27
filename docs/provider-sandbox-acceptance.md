@@ -61,8 +61,12 @@ Using a wallet signer is not evidence that those requirements are satisfied.
 The owner must establish the relevant partner accounts at
 [Dinari Partners](https://partners.dinari.com/) and
 [MoonPay Dashboard](https://dashboard.moonpay.com/), or provide an already enabled
-equivalent service. Do not create a financial account or accept partner terms
-on the owner's behalf from this task. Provider eligibility and commercial terms
+equivalent service. The owner has now authorized developer signup setup in the
+requested browser profile. Both forms have been prepared but not submitted;
+the signup names are still needed, and MoonPay's submission explicitly accepts
+its Terms of Use. Complete non-binding developer setup within that authorization;
+financial account opening and binding agreements retain their separate action
+boundaries. Provider eligibility and commercial terms
 must be reviewed by their owner. Store issued credentials in the selected secret
 manager, never in chat or Git. No keys, accounts, trades, checkout sessions or
 provider agreements were created during this inspection.
@@ -71,3 +75,22 @@ After that access exists, qualify the sandbox and implement each actual account,
 quote, funding, order, settlement and withdrawal transition using the provider's
 enabled contract. The standalone simulator cannot safely be converted into a
 remote provider by replacing its database observation with an HTTP call.
+
+## Cost verification and prepared signup state
+
+On October 27, the actual Dinari developer signup asks for first name, last name
+and email. MoonPay's business developer signup also asks for a business name and
+states that creating the account accepts its linked terms. No payment details
+or paid plan were selected, and neither signup was submitted in this review.
+
+[Dinari's current partner fees](https://docs.dinari.com/docs/fees) explicitly
+include free sandbox access. Its production API access starts at $2,000/month,
+with other provider costs separate. Do not activate a production plan under a
+free-sandbox instruction.
+
+[MoonPay's current dashboard pricing](https://support.moonpay.com/en/articles/694907-partner-pricing-fees-and-the-removed-paywall)
+states that dashboard access and onboarding have no subscription paywall.
+[Its partner onboarding guide](https://support.moonpay.com/en/articles/694185-partner-onboarding-overview-from-signup-to-going-live)
+states that accounts include test API keys before live approval. This is not
+free live transaction processing or permission to accept its business terms
+without the owner's required action-time approval.
