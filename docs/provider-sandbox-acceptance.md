@@ -62,14 +62,18 @@ The owner must establish the relevant partner accounts at
 [Dinari Partners](https://partners.dinari.com/) and
 [MoonPay Dashboard](https://dashboard.moonpay.com/), or provide an already enabled
 equivalent service. The owner has now authorized developer signup setup in the
-requested browser profile. Both forms have been prepared but not submitted;
-the signup names are still needed, and MoonPay's submission explicitly accepts
-its Terms of Use. Complete non-binding developer setup within that authorization;
+requested browser profile. Both forms were submitted with the owner's supplied
+signup name after approval of MoonPay's displayed Terms of Use. Both now await
+email verification; no dashboard, API keys or completed partner enrollment have
+been observed yet. The Gmail connector masks the authentication codes, so the
+owner must enter them directly into the retained signup tabs. Complete
+non-binding developer setup within that authorization;
 financial account opening and binding agreements retain their separate action
 boundaries. Provider eligibility and commercial terms
 must be reviewed by their owner. Store issued credentials in the selected secret
-manager, never in chat or Git. No keys, accounts, trades, checkout sessions or
-provider agreements were created during this inspection.
+manager, never in chat or Git. No keys, trades, checkout sessions, paid plans or
+live financial accounts were created. Email verification and the remaining
+provider onboarding steps are not established by submission of the signup form.
 
 After that access exists, qualify the sandbox and implement each actual account,
 quote, funding, order, settlement and withdrawal transition using the provider's
@@ -80,8 +84,10 @@ remote provider by replacing its database observation with an HTTP call.
 
 On October 27, the actual Dinari developer signup asks for first name, last name
 and email. MoonPay's business developer signup also asks for a business name and
-states that creating the account accepts its linked terms. No payment details
-or paid plan were selected, and neither signup was submitted in this review.
+states that creating the account accepts its linked terms. The owner approved
+that submission. No payment details or paid plan were selected; both forms
+reached the email-code step. No provider secret or one-time code was saved in
+the repository.
 
 [Dinari's current partner fees](https://docs.dinari.com/docs/fees) explicitly
 include free sandbox access. Its production API access starts at $2,000/month,
