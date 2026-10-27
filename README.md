@@ -253,6 +253,9 @@ instrument through the official SDK, makes no mutations, and never reports live
 acceptance. Missing configuration exits 2 without network requests. Real orders,
 funding and settlement remain unimplemented. No MoonPay credentials are consumed
 yet. The first-party auth settings above are consumed by the application.
+The current [sandbox acceptance requirements](docs/provider-sandbox-acceptance.md)
+record an important funding-token/network mismatch in the public sandbox docs;
+the two providers cannot yet be claimed as one verified funding/investment loop.
 
 ### Product and provider gates
 
