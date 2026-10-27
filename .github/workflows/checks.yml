@@ -49,12 +49,13 @@ jobs:
         shell: bash
         run: |
           docker run --detach --name blunts-smoke --network host \
-            -e PORT=8742 -e APP_ORIGIN=http://localhost:8742 \
+            -e PORT=8742 -e APP_ORIGIN=http://localhost:8742 -e AUTH_PROVIDER=demo \
             -e DATABASE_URL=postgresql://blunts:ci-test-only@localhost:5432/blunts_test \
             blunts-sandbox:${{ github.sha }}
           trap 'docker logs blunts-smoke; docker rm --force blunts-smoke' EXIT
           curl --fail --retry 15 --retry-delay 2 --retry-connrefused http://localhost:8742/api/health
           curl --fail http://localhost:8742/ | grep -q '<div id="root">'
+          node scripts/smoke-local-container.mjs http://localhost:8742
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4

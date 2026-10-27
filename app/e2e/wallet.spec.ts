@@ -149,6 +149,116 @@ test("setup overlays the tray and backup lives in help", async ({ page }) => {
   await expect(help).not.toBeVisible();
 });
 
+test("idle refresh stays within budget and a failed read preserves the balance", async ({
+  page,
+}, testInfo) => {
+  await signup(page);
+  let reads = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith("/api/me")) reads++;
+  });
+  // Fixed measurement window: the old 1.5s timer makes four reads here.
+  await page.waitForTimeout(6000);
+  expect(reads).toBe(0);
+  await act(page, "Fill", "100");
+  await expect(page.locator(".scene-value")).toHaveText("$99.00");
+  expect(reads).toBeLessThanOrEqual(10);
+  const activeReads = reads;
+  let unavailable = true;
+  await page.route("**/api/me", (route) =>
+    unavailable ? route.abort("failed") : route.continue(),
+  );
+  // Focusing a different tab and returning exercises the real resume event.
+  const other = await page.context().newPage();
+  await other.goto("about:blank");
+  await other.bringToFront();
+  await page.bringToFront();
+  await expect(
+    page.getByRole("button", { name: "Reconnect", exact: true }),
+  ).toBeVisible({ timeout: 20000 });
+  await expect(page.locator(".scene-value")).toHaveText("$99.00");
+  await expect(
+    page.getByRole("button", { name: "Fill", exact: true }),
+  ).toBeDisabled();
+  unavailable = false;
+  await page.getByRole("button", { name: "Reconnect", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Fill", exact: true }),
+  ).toBeEnabled();
+  await other.close();
+  await testInfo.attach("refresh-budget", {
+    body: JSON.stringify({ idleReadsIn6Seconds: 0, activeReads }),
+    contentType: "application/json",
+  });
+});
+
+test("cash out is reachable, survives a lost response and settles only once", async ({
+  page,
+}, testInfo) => {
+  await signup(page);
+  await act(page, "Fill", "100");
+  await expect(page.locator(".scene-value")).toHaveText("$99.00");
+  await expect(
+    page.getByRole("button", { name: "Spark", exact: true }),
+  ).toBeEnabled();
+  await act(page, "Spark", "99", true);
+  await expect(page.locator(".scene-cash strong")).toHaveText("$98.01");
+  await expect(page.locator(".scene-dock button")).toHaveCount(2);
+  await page.getByRole("button", { name: "Spark", exact: true }).click();
+  await page.getByRole("button", { name: "Add test destination" }).click();
+  await page.getByLabel("Destination label").fill("My demo destination");
+  await page
+    .getByLabel("Confirm password", { exact: true })
+    .first()
+    .fill("browser-test-password");
+  await page.getByRole("button", { name: "Save test destination" }).click();
+  await expect(
+    page.getByText("Simulated destination added.", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Wallet", exact: true }).click();
+  await page.getByRole("button", { name: "Spark", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "Cash out", exact: true });
+  await expect(sheet.getByLabel("Amount in dollars")).toHaveValue("98.01");
+  await sheet.getByLabel("Amount in dollars").fill("100");
+  await sheet.getByLabel("Confirm password").fill("browser-test-password");
+  await sheet.getByRole("button", { name: "Cash out demo funds" }).click();
+  await expect(sheet.getByRole("alert")).toHaveText(
+    "Choose an amount within your available cash.",
+  );
+  await sheet.getByLabel("Amount in dollars").fill("98.01");
+  const keys: string[] = [];
+  await page.route("**/api/intents", async (route) => {
+    keys.push(route.request().headers()["idempotency-key"]);
+    if (keys.length === 1) {
+      await route.fetch();
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await sheet.getByRole("button", { name: "Cash out demo funds" }).click();
+  await expect(
+    sheet.getByRole("button", { name: "Retry cash out" }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("button", { name: "WALLET", exact: true }).click();
+  await page.getByRole("button", { name: "Cash out", exact: true }).click();
+  await expect(sheet.getByLabel("Amount in dollars")).toBeDisabled();
+  await expect(sheet.getByLabel("Confirm password")).toHaveValue("");
+  await page.screenshot({ path: testInfo.outputPath("cash-out-retry.png") });
+  await sheet.getByLabel("Confirm password").fill("browser-test-password");
+  await sheet.getByRole("button", { name: "Retry cash out" }).click();
+  await expect(sheet).not.toBeVisible();
+  await expect(page.locator(".scene-cash strong")).toHaveText("$0.00");
+  expect(keys).toHaveLength(2);
+  expect(new Set(keys).size).toBe(1);
+  const me = await (await page.request.get("/api/me")).json();
+  expect(
+    me.intents.filter((i: { kind: string }) => i.kind === "payout"),
+  ).toHaveLength(1);
+  await page.reload();
+  await expect(page.locator(".scene-cash strong")).toHaveText("$0.00");
+});
+
 test("original scene fills, bundles and burns with one press", async ({
   page,
 }, testInfo) => {

@@ -1,6 +1,7 @@
 import { openDatabase } from "./database.js";
 import { createApp } from "./app.js";
 import { tick, reconcile } from "./domain.js";
+import { stewardConfig } from "./steward.js";
 const port = Number(process.env.PORT ?? 8740);
 const origin = process.env.APP_ORIGIN ?? `http://localhost:${port}`;
 const mode = process.env.MONEY_MODE ?? "simulation";
@@ -15,6 +16,7 @@ const app = await createApp({
   mode,
   serveStatic: true,
   logger: true,
+  steward: await stewardConfig(),
 });
 let running = false,
   stopping = false,

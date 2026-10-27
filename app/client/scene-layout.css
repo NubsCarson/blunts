@@ -155,6 +155,22 @@ body::before {
 .scene-cash strong {
   color: var(--paper);
 }
+.transaction-sheet .cash-out-link {
+  display: block;
+  margin: 4px auto 0;
+  padding: 8px 16px;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--leaf);
+  pointer-events: auto;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.cash-out-sheet form {
+  display: grid;
+  gap: 16px;
+}
 .scene-dock {
   position: absolute;
   left: 0;

@@ -4,9 +4,11 @@ One React app for the web, iOS and Android. Wallet setup appears over the 3D tra
 backup, recovery and sign-out live under **Menu → Wallet**. No subscription. The simulated
 investment flow charges an uncapped 1% on each completed Fill/Spark conversion.
 
-**Current release: simulated money only.** The browser and Capacitor apps use a
-real persistent backend, but no real wallet signer, MoonPay checkout, Dinari
-account or investment asset is connected. `MONEY_MODE=live` deliberately refuses
+**Current release: simulated money only.** Eliza Cloud is the default first-party
+login gateway; direct Steward deployments are also supported. Identity, personal
+wallet provisioning and server-held sessions are connected. Funding, investments,
+sales and payouts still use the deterministic simulator. No transaction signer,
+MoonPay checkout, Dinari account or investment asset is connected. `MONEY_MODE=live` deliberately refuses
 to start. Adding credentials will not enable live money: the integrations below
 still require implementation and acceptance. This runbook distinguishes that
 engineering work from account setup and publishing work.
@@ -23,13 +25,23 @@ npm start
 # http://localhost:8740
 ```
 
-Create a test handle and password in the overlay, accept the demo terms, then
+Sign in with your Eliza Cloud email and code in the overlay, accept the demo terms, then
 press **Fill** once to fund and invest. Press **Spark** once to sell back into the
 wallet. Each sheet closes immediately; there is no second confirmation screen.
 The backend persists both Fill stages and resumes them after a reload or restart.
 The existing payout adapter API remains available for provider integration; no real
 external payment rail is connected in this release.
-Use **Menu → Wallet → Back up wallet** to view the initially issued recovery code or replace
+After a full sale settles, press **Spark** again to cash out, or open
+**Menu → Wallet → Cash out**. Add a test destination in Settings, choose the
+amount. Your verified first-party session authorizes simulated actions. Lost
+responses reuse the saved instruction after reopening or reloading.
+**Menu → Wallet** shows the connected wallet and account/recovery link. No
+financial transaction signing or private-key export is exposed by Blunts.
+
+For fully offline testing, use `AUTH_PROVIDER=demo npm start`. This selects the
+password-based demo account, with a separate session cookie and no automatic
+linking to a Cloud identity. Confirm your demo password for payouts. Use
+**Menu → Wallet → Back up wallet** to view the initially issued recovery code or replace
 it after confirming your password. Replacing a code invalidates the old one.
 Signed-out users can choose **Menu → Wallet → Recover wallet**. This code recovers a demo
 account; it is NOT a blockchain seed phrase or wallet key backup.
@@ -41,6 +53,12 @@ operator tools while the app runs. The creative `.env` is never loaded by the ap
 | Setting | Current behavior |
 |---|---|
 | `MONEY_MODE` | Only `simulation` supported |
+| `AUTH_PROVIDER` | `eliza-cloud` by default; `steward` for a direct owned deployment; `demo` for offline QA |
+| `ELIZA_CLOUD_API_URL` | Cloud origin, default `https://api.eliza.app`; the app uses its existing `/steward` gateway |
+| `ELIZA_CLOUD_WEB_URL` | Account/recovery frontend; defaults to `https://eliza.app` for the default Cloud API |
+| `STEWARD_API_URL`, `STEWARD_WEB_URL` | Explicit owned service/account URLs in direct Steward mode |
+| `STEWARD_SESSION_ENCRYPTION_KEY` | Base64 32-byte key, required for first-party auth in production; keep it in the host secret manager |
+| `STEWARD_SESSION_KEY_FILE` | Development-only protected persistent key file, default `data/steward-session.key` |
 | `DATABASE_URL` | PostgreSQL URL, or local PGlite directory; default `data/blunts` |
 | `APP_ORIGIN` | Exact web/API origin, default `http://localhost:8740`; HTTPS enables secure cookies and HSTS |
 | `HOST`, `PORT` | Default `127.0.0.1`, `8740`; use `0.0.0.0` inside a container |
@@ -58,6 +76,11 @@ python3 -m unittest discover -s tests
 node --test tests/prototype.test.cjs
 npm audit
 ```
+
+See [first-party integration](docs/first-party-integration.md) for isolated
+Steward acceptance and Cloud routing. [Local review](docs/local-review-2026-10-27.md)
+records current checks and the remaining financial-service gap. Creative proposals
+stay separate from the implementation in [creative-proposals.md](docs/creative-proposals.md).
 
 `TEST_DATABASE_URL` enables the additional real PostgreSQL full-cycle test. Use a
 fresh disposable database: the suite creates fixture users. Never point it at
@@ -189,7 +212,7 @@ the live startup refusal until the evidence in this table exists.
 
 | Workstream | Build / configure | Acceptance evidence |
 |---|---|---|
-| Real identity and wallet | Privy or selected provider projects; verified email/passkey/MFA; dedicated user wallets on Arbitrum; native auth, signing, key export/recovery; gas sponsorship | Signatures from the correct user's wallet, recovery on a second device, revoked-session rejection, scoped transaction approval |
+| Real identity and wallet | Owned Steward/Eliza Cloud identity and personal wallet provisioning are implemented; qualify production origins/MFA/custody and implement approved per-user signing, recovery and gas sponsorship | Signatures from the correct user's wallet, recovery on a second device, revoked-session rejection, scoped transaction approval |
 | Funding and payout | MoonPay signed checkout/off-ramp adapter; enabled native USDC/Arbitrum buy AND sell; exact Cash App partner entitlement; verified raw-body webhooks and provider status lookup | Real provider sandbox funding/withdrawal, wrong-chain/address rejection, duplicate/out-of-order events, reversals and timeouts |
 | Investments | Approved Dinari US API v2 program, enabled instrument/network, customer enrollment/KYC/agreements, quotes/NBBO, orders, fills, settlement, corporate actions, documents | Provider-approved UI and an end-to-end eligible account cycle; no fixture price or DEMO_QQQ left on the live path |
 | Distributed execution | Durable pre-submit commands, I/O outside database transactions, external idempotency, event inbox deduplication, replay-safe transitions and polling reconciliation | Crash before submission, after external acceptance, before local commit, webhook before response, repeated events and provider outage all reconcile once |
@@ -210,8 +233,8 @@ host's secret manager and grant the deployment identity scoped access.
 
 - Legal entity and intended customer countries/states; owned domain and support
   address; named business, security and operational owners.
-- Wallet-provider project, permitted web origins, iOS/Android identifiers,
-  native SDK/OAuth callback setup and recovery/signing authority decision.
+- Owned Steward/first-party Cloud service, permitted web origins and iOS/Android identifiers;
+  provider account/recovery UI, signing authority and custody acceptance.
 - MoonPay partner verification and credentials, webhook secret, approved origins
   and explicit confirmation of Cash App/native-USDC/Arbitrum IN and OUT support,
   limits, total fees and investment-related use. Consumer support is not proof
@@ -224,7 +247,7 @@ host's secret manager and grant the deployment identity scoped access.
 - Hosting/managed PostgreSQL/backup/monitoring accounts and production budget.
 
 The proposed provider credentials are not consumed by this code yet. Adding
-`MOONPAY_*`, `DINARI_*` or `PRIVY_*` variables alone does nothing.
+`MOONPAY_*` or `DINARI_*` variables alone does nothing. The first-party auth settings above are consumed by this implementation.
 
 ### Product and provider gates
 

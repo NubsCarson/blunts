@@ -17,6 +17,7 @@ services:
     ports: ["127.0.0.1:8740:8740"]
     environment:
       MONEY_MODE: simulation
+      AUTH_PROVIDER: demo
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8740}
       DATABASE_URL: postgresql://blunts:${POSTGRES_PASSWORD}@postgres:5432/blunts
     depends_on:

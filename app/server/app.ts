@@ -9,6 +9,7 @@ import { existsSync } from "node:fs";
 import { z, ZodError } from "zod";
 import { type Database, type Row, migrate } from "./database.js";
 import { token, digest, hashPassword, verifyPassword } from "./auth.js";
+import { Steward, type StewardConfig, type StewardTokens } from "./steward.js";
 import {
   balances,
   createQuote,
@@ -37,6 +38,7 @@ export interface AppOptions {
   mode?: string;
   serveStatic?: boolean;
   logger?: boolean;
+  steward?: StewardConfig;
 }
 export async function createApp(options: AppOptions) {
   if ((options.mode ?? "simulation") !== "simulation")
@@ -44,6 +46,13 @@ export async function createApp(options: AppOptions) {
       "Live money is disabled: no approved production provider adapters are configured.",
     );
   const { db, origin } = options;
+  const steward = options.steward ? new Steward(options.steward) : null;
+  const cookieName =
+    options.steward?.provider === "eliza-cloud"
+      ? "blunts_cloud_session"
+      : steward
+        ? "blunts_steward_session"
+        : "blunts_session";
   const app = Fastify({
     logger: options.logger
       ? {
@@ -91,7 +100,7 @@ export async function createApp(options: AppOptions) {
     }
   });
   async function session(req: any): Promise<Row> {
-    const raw = req.cookies.blunts_session;
+    const raw = req.cookies[cookieName];
     requireThat(typeof raw === "string", "Sign in to continue.", 401);
     const [s] = await db.query(
       `SELECT s.*,u.handle,u.status FROM sessions s JOIN users u ON s.user_id=u.id WHERE s.hash=$1 AND s.expires_at>$2`,
@@ -108,9 +117,26 @@ export async function createApp(options: AppOptions) {
         "Refresh the page and try again.",
         403,
       );
+    const [external] = await db.query(
+      "SELECT user_id FROM steward_identities WHERE user_id=$1",
+      [s.user_id],
+    );
+    if (steward || external) {
+      requireThat(
+        steward && external,
+        "Sign in with Steward to continue.",
+        401,
+      );
+      s.steward = await steward.verifySession(db, s.hash, s.user_id);
+      requireThat(s.steward, "Steward session expired. Sign in again.", 401);
+    }
     return s;
   }
-  async function startSession(user: string, reply: any) {
+  async function startSession(
+    user: string,
+    reply: any,
+    external?: StewardTokens,
+  ) {
     const raw = token(),
       csrf = token();
     await db.query("INSERT INTO sessions VALUES ($1,$2,$3,$4)", [
@@ -119,7 +145,8 @@ export async function createApp(options: AppOptions) {
       csrf,
       now() + 8 * 60 * 60_000,
     ]);
-    reply.setCookie("blunts_session", raw, {
+    if (external) await steward!.saveSession(db, digest(raw), external);
+    reply.setCookie(cookieName, raw, {
       path: "/",
       httpOnly: true,
       sameSite: "strict",
@@ -127,6 +154,17 @@ export async function createApp(options: AppOptions) {
       maxAge: 8 * 60 * 60,
     });
     return { csrf };
+  }
+  async function confirmDemoAction(s: Row, password?: string) {
+    if (s.steward) return; // This deployment still permits simulated money only.
+    const [u] = await db.query("SELECT password FROM users WHERE id=$1", [
+      s.user_id,
+    ]);
+    requireThat(
+      password && (await verifyPassword(password, u.password)),
+      "Confirm your password for this action.",
+      401,
+    );
   }
   app.setErrorHandler((error, req, reply) => {
     if (error instanceof ZodError)
@@ -159,6 +197,120 @@ export async function createApp(options: AppOptions) {
   const authConfig = {
     config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
   };
+  app.get("/api/auth/config", async () => ({
+    provider: steward ? (options.steward?.provider ?? "steward") : "demo",
+    moneyMode: "simulation",
+    accountUrl: options.steward?.accountUrl ?? null,
+  }));
+  if (steward) {
+    const email = z.string().email().max(254);
+    async function acceptSteward(result: any, reply: any) {
+      if (result.mfaRequired) {
+        const challenge = z
+          .object({
+            type: z.enum(["totp", "sms"]),
+            challengeId: z.string().min(1).max(256),
+          })
+          .safeParse(result.mfa);
+        requireThat(
+          challenge.success,
+          "Use your Steward passkey sign-in or contact your Steward administrator to complete verification.",
+          403,
+        );
+        return { mfaRequired: true, mfa: challenge.data };
+      }
+      const { tokens, identity } = await steward!.completeSession(result);
+      const localUser = await db.transaction(async (tx) => {
+        const [existing] = await tx.query(
+          "SELECT user_id FROM steward_identities WHERE issuer=$1 AND subject=$2",
+          [steward!.issuer, identity.userId],
+        );
+        if (existing) {
+          const [u] = await tx.query("SELECT status FROM users WHERE id=$1", [
+            existing.user_id,
+          ]);
+          requireThat(
+            u.status !== "closed",
+            "This Blunts account has been closed.",
+            403,
+          );
+          return existing.user_id as string;
+        }
+        const user = randomUUID();
+        await tx.query(
+          "INSERT INTO users(id,handle,password,recovery,created_at) VALUES ($1,$2,'','',$3)",
+          [user, `stwd_${user.replaceAll("-", "").slice(0, 24)}`, now()],
+        );
+        await tx.query("INSERT INTO steward_identities VALUES ($1,$2,$3)", [
+          steward!.issuer,
+          identity.userId,
+          user,
+        ]);
+        await audit(
+          tx,
+          user,
+          "Steward identity connected. Investment balances remain simulated.",
+        );
+        return user;
+      });
+      return startSession(localUser, reply, tokens);
+    }
+    app.post("/api/auth/steward/send", authConfig, async (req) => {
+      const body = z.object({ email }).strict().parse(req.body);
+      await steward.request("/auth/email/send", body);
+      return { ok: true };
+    });
+    app.post("/api/auth/steward/verify", authConfig, async (req, reply) => {
+      const body = z
+        .object({ email, code: z.string().regex(/^\d{6}$/) })
+        .strict()
+        .parse(req.body);
+      return acceptSteward(
+        await steward.request("/auth/email/code/verify", body),
+        reply,
+      );
+    });
+    app.post("/api/auth/steward/mfa", authConfig, async (req, reply) => {
+      const { type, ...body } = z
+        .object({
+          type: z.enum(["totp", "sms"]),
+          challengeId: z.string().min(1).max(256),
+          code: z.string().min(6).max(12),
+        })
+        .strict()
+        .parse(req.body);
+      return acceptSteward(
+        await steward.request(`/auth/mfa/${type}/complete`, body),
+        reply,
+      );
+    });
+    app.post("/api/steward/wallet", async (req) => {
+      const s = await session(req);
+      const [stored] = await db.query(
+        "SELECT sealed FROM steward_sessions WHERE hash=$1",
+        [s.hash],
+      );
+      requireThat(stored, "Sign in with Steward first.", 401);
+      const tokens = steward.unseal(stored.sealed, s.hash);
+      const response = await steward.request(
+        "/user/me/wallet",
+        {},
+        tokens.token,
+      );
+      const wallet = z
+        .object({
+          walletAddress: z.string().max(256),
+          agentId: z.string().max(256),
+        })
+        .safeParse(response.data);
+      requireThat(
+        wallet.success,
+        "Steward could not confirm your wallet.",
+        502,
+      );
+      return wallet.data;
+    });
+  }
   app.get("/api/health", async () => {
     await db.query("SELECT 1");
     return { ok: true, mode: "simulation", liveMoneyEnabled: false };
@@ -184,15 +336,18 @@ export async function createApp(options: AppOptions) {
         reason: "Program, instrument/network and fee approvals required.",
       },
       {
-        name: "Privy",
-        enabled: false,
-        reason: "Wallet project and signer/recovery configuration required.",
+        name: "Steward",
+        enabled: !!steward,
+        reason: steward
+          ? "Personal identity and wallet provisioning connected. No financial transaction signing is exposed by this preview."
+          : "Set AUTH_PROVIDER=steward and the owned Steward API origin.",
       },
     ],
     disclosure:
       "No real wallets, securities, payment accounts or money. Never send funds to this sandbox.",
   }));
   app.post("/api/auth/register", authConfig, async (req, reply) => {
+    requireThat(!steward, "Use Steward sign-in for this deployment.", 403);
     const body = credentials.parse(req.body);
     const user = randomUUID(),
       recoveryCode = token();
@@ -207,6 +362,7 @@ export async function createApp(options: AppOptions) {
     return { ...(await startSession(user, reply)), recoveryCode };
   });
   app.post("/api/auth/login", authConfig, async (req, reply) => {
+    requireThat(!steward, "Use Steward sign-in for this deployment.", 403);
     const body = credentials.parse(req.body);
     const [u] = await db.query("SELECT * FROM users WHERE handle=$1", [
       body.handle,
@@ -223,6 +379,7 @@ export async function createApp(options: AppOptions) {
     return startSession(u.id, reply);
   });
   app.post("/api/auth/recover", authConfig, async (req, reply) => {
+    requireThat(!steward, "Recover your account through Steward.", 403);
     const body = credentials
       .extend({ recoveryCode: z.string().min(20).max(128) })
       .parse(req.body);
@@ -246,6 +403,7 @@ export async function createApp(options: AppOptions) {
     return { ...(await startSession(user, reply)), recoveryCode: newCode };
   });
   app.post("/api/auth/backup", authConfig, async (req) => {
+    requireThat(!steward, "Manage your recovery through Steward.", 403);
     const s = await session(req);
     const { password } = z
       .object({ password: z.string().max(128) })
@@ -271,10 +429,26 @@ export async function createApp(options: AppOptions) {
     return { recoveryCode };
   });
   app.post("/api/auth/logout", async (req, reply) => {
-    const s = await session(req);
-    await db.query("DELETE FROM sessions WHERE hash=$1", [s.hash]);
-    reply.clearCookie("blunts_session", { path: "/" });
-    return { ok: true };
+    const raw = req.cookies[cookieName];
+    requireThat(typeof raw === "string", "Sign in to continue.", 401);
+    const [s] = await db.query("SELECT * FROM sessions WHERE hash=$1", [
+      digest(raw),
+    ]);
+    requireThat(
+      s && req.headers["x-csrf-token"] === s.csrf,
+      "Refresh before signing out.",
+      403,
+    );
+    let upstreamRevoked = true;
+    try {
+      if (steward) await steward.revokeSession(db, s.hash);
+    } catch {
+      upstreamRevoked = false;
+    } finally {
+      await db.query("DELETE FROM sessions WHERE hash=$1", [s.hash]);
+    }
+    reply.clearCookie(cookieName, { path: "/" });
+    return { ok: true, upstreamRevoked };
   });
   app.get("/api/me", async (req) => {
     const s = await session(req);
@@ -283,6 +457,7 @@ export async function createApp(options: AppOptions) {
       status: s.status,
       csrf: s.csrf,
       simulation: true,
+      steward: s.steward ?? null,
       balances: await balances(tx, s.user_id),
       destinations: await tx.query(
         "SELECT id,label,rail,address FROM destinations WHERE user_id=$1 ORDER BY created_at",
@@ -344,18 +519,11 @@ export async function createApp(options: AppOptions) {
       .object({
         rail: z.enum(["cash_app_demo", "wallet_demo"]),
         label: z.string().trim().min(2).max(50),
-        password: z.string().max(128),
+        password: z.string().max(128).optional(),
       })
       .strict()
       .parse(req.body);
-    const [u] = await db.query("SELECT password FROM users WHERE id=$1", [
-      s.user_id,
-    ]);
-    requireThat(
-      await verifyPassword(body.password, u.password),
-      "Password confirmation failed.",
-      401,
-    );
+    await confirmDemoAction(s, body.password);
     const destinationId = randomUUID();
     await db.transaction(async (tx) => {
       requireThat(
@@ -429,14 +597,7 @@ export async function createApp(options: AppOptions) {
         [body.quoteId, s.user_id],
       );
       if (q?.kind === "payout") {
-        const [u] = await db.query("SELECT password FROM users WHERE id=$1", [
-          s.user_id,
-        ]);
-        requireThat(
-          body.password && (await verifyPassword(body.password, u.password)),
-          "Confirm your password for this payout.",
-          401,
-        );
+        await confirmDemoAction(s, body.password);
       }
       return db.transaction((tx) =>
         createIntent(tx, s.user_id, body.quoteId, key, body.scenario),
@@ -546,17 +707,10 @@ export async function createApp(options: AppOptions) {
   app.post("/api/close", authConfig, async (req, reply) => {
     const s = await session(req);
     const { password } = z
-      .object({ password: z.string().max(128) })
+      .object({ password: z.string().max(128).optional() })
       .strict()
       .parse(req.body);
-    const [u] = await db.query("SELECT password FROM users WHERE id=$1", [
-      s.user_id,
-    ]);
-    requireThat(
-      await verifyPassword(password, u.password),
-      "Password confirmation failed.",
-      401,
-    );
+    await confirmDemoAction(s, password);
     await db.transaction(async (tx) => {
       const b = await balances(tx, s.user_id);
       requireThat(
@@ -583,7 +737,7 @@ export async function createApp(options: AppOptions) {
       );
       await tx.query("DELETE FROM sessions WHERE user_id=$1", [s.user_id]);
     });
-    reply.clearCookie("blunts_session", { path: "/" });
+    reply.clearCookie(cookieName, { path: "/" });
     return { ok: true };
   });
   if (options.serveStatic) {
