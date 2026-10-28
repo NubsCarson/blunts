@@ -69,6 +69,7 @@ export function EvmApp() {
     [marketError, setMarketError] = useState(""),
     [clock, setClock] = useState(Date.now());
   const quoteEpoch = useRef(0);
+  const balanceEpoch = useRef(0);
   const preparedSection = useRef<HTMLElement>(null);
   const epoch = useRef(0),
     dialog = useRef<HTMLDialogElement>(null);
@@ -105,10 +106,15 @@ export function EvmApp() {
       window.removeEventListener("eip6963:announceProvider", announce);
   }, []);
   useEffect(() => {
-    let stopped = false;
+    let stopped = false,
+      loading = false;
     async function update() {
+      if (loading || stopped) return;
+      loading = true;
       try {
-        const r = await fetch("/api/onchain/market");
+        const r = await fetch("/api/onchain/market", {
+          signal: AbortSignal.timeout(15000),
+        });
         const d = await r.json();
         if (!r.ok) throw Error(d.error);
         if (!stopped) {
@@ -120,14 +126,21 @@ export function EvmApp() {
           setMarket(null);
           setMarketError("Market data unavailable. Refresh to try again.");
         }
+      } finally {
+        loading = false;
       }
     }
     void update();
+    const visible = () => {
+      if (!document.hidden) void update();
+    };
+    document.addEventListener("visibilitychange", visible);
     const timer = setInterval(() => {
       if (!document.hidden) void update();
     }, 30000);
     return () => {
       stopped = true;
+      document.removeEventListener("visibilitychange", visible);
       clearInterval(timer);
     };
   }, []);
@@ -146,8 +159,18 @@ export function EvmApp() {
   }, [quote]);
   useEffect(() => {
     if (!provider) return;
-    const accountsChanged = (accounts: string[]) => {
+    const invalidate = () => {
       epoch.current++;
+      quoteEpoch.current++;
+      balanceEpoch.current++;
+      setBalances(null);
+      setQuote(null);
+      setPrepared(null);
+      setStepFee(null);
+    };
+    const accountsChanged = (raw: unknown) => {
+      const accounts = Array.isArray(raw) ? raw : [];
+      invalidate();
       setAccount(
         /^0x[0-9a-fA-F]{40}$/.test(accounts[0] ?? "")
           ? (accounts[0] as Address)
@@ -156,15 +179,26 @@ export function EvmApp() {
       setBalances(null);
       setQuote(null);
     };
-    const chainChanged = (value: string) => {
-      epoch.current++;
-      setChain(Number(value));
-      setBalances(null);
-      setQuote(null);
+    const chainChanged = (value: unknown) => {
+      invalidate();
+      setChain(
+        typeof value === "string" &&
+          /^0x[0-9a-fA-F]+$/.test(value) &&
+          Number.isSafeInteger(Number(value))
+          ? Number(value)
+          : null,
+      );
     };
+    const disconnected = () => {
+      invalidate();
+      setAccount(null);
+      setChain(null);
+    };
+    provider.on?.("disconnect", disconnected);
     provider.on?.("accountsChanged", accountsChanged);
     provider.on?.("chainChanged", chainChanged);
     return () => {
+      provider.removeListener?.("disconnect", disconnected);
       provider.removeListener?.("accountsChanged", accountsChanged);
       provider.removeListener?.("chainChanged", chainChanged);
     };
@@ -172,6 +206,7 @@ export function EvmApp() {
   async function refreshBalances() {
     if (!account || chain !== 4663) return;
     const version = epoch.current;
+    const readVersion = ++balanceEpoch.current;
     try {
       const [c, s, e] = await Promise.all([
         reader.readContract({
@@ -188,9 +223,10 @@ export function EvmApp() {
         }),
         reader.getBalance({ address: account }),
       ]);
-      if (version === epoch.current) setBalances({ cash: c, stock: s, eth: e });
+      if (version === epoch.current && readVersion === balanceEpoch.current)
+        setBalances({ cash: c, stock: s, eth: e });
     } catch {
-      if (version === epoch.current) {
+      if (version === epoch.current && readVersion === balanceEpoch.current) {
         setBalances(null);
         setError("Could not read wallet balances. Try refreshing.");
       }
@@ -318,6 +354,7 @@ export function EvmApp() {
   async function preview() {
     if (panel !== "fill" && panel !== "spark") return;
     const version = ++quoteEpoch.current;
+    const identity = epoch.current;
     setRestoredReview(false);
     setBusy(true);
     setError("");
@@ -330,9 +367,10 @@ export function EvmApp() {
       );
       const data = await response.json();
       if (!response.ok) throw Error(data.error);
-      if (version === quoteEpoch.current) setQuote(data);
+      if (version === quoteEpoch.current && identity === epoch.current)
+        setQuote(data);
     } catch (e) {
-      if (version === quoteEpoch.current)
+      if (version === quoteEpoch.current && identity === epoch.current)
         setError(
           e instanceof Error ? e.message : "Quote unavailable. Try again.",
         );

@@ -363,3 +363,32 @@ Chromium, mobile Chromium and WebKit, including actual queued Web Locks, sibling
 storage-event readback, restoration, private export, ETH readiness and walkthrough.
 The fork writer remains absent from public build output. Signing, publishing,
 real-money execution and mainnet finality acceptance remain unfinished.
+
+## Wallet lifecycle invalidation
+
+Account/network changes now invalidate every in-flight quote and balance read,
+clear the prepared plan and ETH estimate immediately, and prevent an older
+response from repopulating the tray. A provider `disconnect` event also clears
+identity and network state. Chain events accept only safe hexadecimal IDs;
+unsupported or malformed networks cannot retain a usable review. Repeated balance
+refreshes use a separate read generation so an older same-wallet response cannot
+overwrite a newer refresh.
+
+Public market reads now have a 15-second browser deadline, run one at a time,
+pause periodic work in hidden tabs and refresh when the page becomes visible.
+The server retains its fixed origins and bounded upstream requests. No automatic
+wallet reconnect, signature request, transaction retry or gas spending was added.
+
+Browser qualification holds an actual quote HTTP response, emits a network switch,
+then releases the response and waits for the preview request to finish. The quote
+remains absent, the tray shows an unavailable value, the wallet shows the changed
+network, and activity is hidden. A provider disconnect then returns the connection
+control and leaves no stale balance. These are disposable browser fixture events,
+not owner-wallet or physical-device proof. Prior six-case wallet/activity/reload
+and walkthrough coverage remains in the suite.
+
+Lifecycle validation completed: build/typecheck, formatting and whitespace checks
+passed. All six final browser cases passed across Chromium, mobile Chromium and
+WebKit with delayed quote/network/disconnect coverage. The backend was not changed
+in this checkpoint; the prior full 58-pass/two-skip receipt remains separately
+identified. Mainnet signing and physical mobile-wallet acceptance remain open.

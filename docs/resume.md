@@ -295,3 +295,9 @@ The earlier premature 6/6 claim in `4863913` is superseded by the final complete
 run: **58 backend passed/two optional skips, six browser cases passed**. Loopback
 preview was restarted with this fix. No source reset, data cleanup, credentials,
 mainnet writes, deployment or publishing occurred.
+
+Wallet lifecycle follow-up invalidates in-flight quotes/balances/prepared steps
+on account/network changes and provider disconnect. Delayed quote responses can
+no longer restore old-context reviews. Public market reads have a 15-second
+browser deadline, no overlap, and visible-tab resume refresh. No wallet writes,
+automatic reconnect or real-money retries were introduced.

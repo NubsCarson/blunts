@@ -34,6 +34,10 @@ test("wallet-first preview connects without signup, reads balances and never sen
       };
       (window as any).fixtureAccountsChanged = (accounts: string[]) =>
         listeners.accountsChanged?.(accounts);
+      (window as any).fixtureChainChanged = (chain: string) =>
+        listeners.chainChanged?.(chain);
+      (window as any).fixtureDisconnect = () =>
+        listeners.disconnect?.({ code: 4900 });
     },
     { wallet },
   );
@@ -361,9 +365,48 @@ test("wallet-first preview connects without signup, reads balances and never sen
     0,
   );
   await page.getByRole("button", { name: "Close", exact: true }).click();
-  await page.evaluate(() => {
-    (window as any).fixtureAccountsChanged([]);
+  // A quote requested before a network switch must not return into the sheet.
+  let releaseQuote!: () => void;
+  let quoteStarted!: () => void;
+  const quoteHeld = new Promise<void>((r) => (quoteStarted = r));
+  const quoteRelease = new Promise<void>((r) => (releaseQuote = r));
+  await page.route("**/api/onchain/quote?*", async (route) => {
+    quoteStarted();
+    await quoteRelease;
+    await route.fulfill({
+      json: {
+        side: "fill",
+        amountIn: "25",
+        amountOut: "0.035",
+        minimumOut: "0.034825",
+        fee: 500,
+        pool: wallet,
+        blockNumber: "1",
+        expiresAt: Date.now() + 20000,
+        transactionsEnabled: false,
+      },
+    });
   });
+  await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
+  await quoteHeld;
+  await page.evaluate(() => (window as any).fixtureChainChanged("0x1"));
+  releaseQuote();
+  await expect(
+    page.getByRole("button", { name: "Preview swap", exact: true }),
+  ).toBeEnabled();
+  await expect(page.locator(".evm-quote")).toHaveCount(0);
+  await expect(page.locator(".scene-value")).toHaveText("—");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.locator(".evm-connect button").click();
+  await expect(
+    page.getByText("Your wallet is on chain 1.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Transaction activity" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.evaluate(() => (window as any).fixtureDisconnect());
   await expect(
     page.getByRole("button", { name: "Connect wallet", exact: true }),
   ).toBeVisible();
