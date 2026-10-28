@@ -1,3 +1,4 @@
+import type { WalletProvider as Provider } from "../shared/wallet-provider";
 import { quoteAfterFee } from "../shared/app-fee";
 import { executionPolicyForOrigin } from "../shared/execution-policy";
 import { WalletSigning } from "./WalletSigning";
@@ -13,7 +14,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { HowItWorks } from "./HowItWorks";
-import { request } from "./platform";
+import { request, native, onBack, onResume } from "./platform";
+import { NativeWalletError } from "../shared/native-wallet";
 import { mobileWalletHandoff } from "../shared/mobile-wallet";
 import { WalletStepDetails } from "./WalletStepDetails";
 import { Tray } from "./Tray";
@@ -38,11 +40,6 @@ import { ReferenceGapError } from "../shared/reference-price";
 import { TransactionActivity } from "./TransactionActivity";
 import { estimateFirstStepFee, type StepFee } from "./gas-readiness";
 import type { SwapPlan } from "../shared/swap-plan";
-type Provider = {
-  request: (args: { method: string; params?: unknown[] }) => Promise<any>;
-  on?: (name: string, fn: (value: any) => void) => void;
-  removeListener?: (name: string, fn: (value: any) => void) => void;
-};
 type WalletChoice = { id: string; name: string; provider: Provider };
 const usd = (value: bigint) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
@@ -54,6 +51,7 @@ export function EvmApp() {
     [account, setAccount] = useState<Address | null>(null),
     [chain, setChain] = useState<number | null>(null),
     [walletRevision, setWalletRevision] = useState(0),
+    [nativeConnecting, setNativeConnecting] = useState(false),
     [networkSetup, setNetworkSetup] = useState<"unknown" | "missing" | "added">(
       "unknown",
     ),
@@ -78,6 +76,8 @@ export function EvmApp() {
     [error, setError] = useState(""),
     [marketError, setMarketError] = useState(""),
     [clock, setClock] = useState(Date.now());
+  const nativeAttempt = useRef<AbortController | null>(null);
+  const nativeDisconnect = useRef<(() => Promise<void>) | null>(null);
   const networkInFlight = useRef(false);
   const quoteEpoch = useRef(0);
   const balanceEpoch = useRef(0);
@@ -208,9 +208,10 @@ export function EvmApp() {
     provider.on?.("accountsChanged", accountsChanged);
     provider.on?.("chainChanged", chainChanged);
     return () => {
-      provider.removeListener?.("disconnect", disconnected);
-      provider.removeListener?.("accountsChanged", accountsChanged);
-      provider.removeListener?.("chainChanged", chainChanged);
+      const remove = provider.removeListener ?? provider.off;
+      remove?.call(provider, "disconnect", disconnected);
+      remove?.call(provider, "accountsChanged", accountsChanged);
+      remove?.call(provider, "chainChanged", chainChanged);
     };
   }, [provider]);
   async function refreshBalances() {
@@ -245,6 +246,19 @@ export function EvmApp() {
   useEffect(() => {
     void refreshBalances();
   }, [account, chain, walletRevision]);
+  useEffect(
+    () => onResume(() => void refreshBalances()),
+    [account, chain, walletRevision],
+  );
+  useEffect(
+    () =>
+      onBack(() => {
+        if (!panel) return false;
+        setPanel(null);
+        return true;
+      }),
+    [panel],
+  );
   async function connect(choice: WalletChoice) {
     setBusy(true);
     setError("");
@@ -265,6 +279,62 @@ export function EvmApp() {
       setPanel(null);
     } catch {
       setError("Wallet connection was cancelled or unavailable. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  useEffect(() => {
+    if (panel !== "wallet") nativeAttempt.current?.abort();
+  }, [panel]);
+  useEffect(() => () => nativeAttempt.current?.abort(), []);
+  async function connectNative() {
+    if (!native || nativeAttempt.current) return;
+    const controller = new AbortController();
+    nativeAttempt.current = controller;
+    const identity = ++epoch.current;
+    setNativeConnecting(true);
+    setBusy(true);
+    setError("");
+    try {
+      const { connectNativeWallet } = await import("./native-wallet");
+      const connection = await connectNativeWallet(controller.signal);
+      if (controller.signal.aborted || identity !== epoch.current) {
+        await connection.disconnect();
+        return;
+      }
+      nativeDisconnect.current = connection.disconnect;
+      setProvider(connection.provider);
+      setAccount(connection.accounts[0] as Address);
+      setChain(Number(connection.chainId));
+      setBalances(null);
+      nativeAttempt.current = null;
+      setPanel(null);
+    } catch (failure) {
+      if (identity === epoch.current && !controller.signal.aborted)
+        setError(
+          failure instanceof NativeWalletError
+            ? failure.message
+            : "Wallet connection was unavailable. Try again.",
+        );
+    } finally {
+      if (nativeAttempt.current === controller) nativeAttempt.current = null;
+      setNativeConnecting(false);
+      setBusy(false);
+    }
+  }
+  async function disconnectWallet() {
+    setBusy(true);
+    try {
+      await nativeDisconnect.current?.();
+      nativeDisconnect.current = null;
+      epoch.current++;
+      setProvider(null);
+      setAccount(null);
+      setBalances(null);
+      setChain(null);
+      setPanel(null);
+    } catch {
+      setError("Wallet session could not be disconnected. Try again.");
     } finally {
       setBusy(false);
     }
@@ -652,60 +722,80 @@ export function EvmApp() {
                     </p>
                   )}
                   <button
-                    onClick={() => {
-                      epoch.current++;
-                      setProvider(null);
-                      setAccount(null);
-                      setBalances(null);
-                      setChain(null);
-                      setPanel(null);
-                    }}
+                    disabled={busy}
+                    onClick={() => void disconnectWallet()}
                   >
                     Disconnect from Blunts
                   </button>
                 </>
-              ) : wallets.length ? (
-                wallets.map((w) => (
-                  <button
-                    className="evm-wallet-choice"
-                    key={w.id}
-                    disabled={busy}
-                    onClick={() => void connect(w)}
-                  >
-                    <Wallet size={20} />
-                    {w.name}
-                  </button>
-                ))
               ) : (
-                <div className="evm-wallet-help">
-                  <p className="evm-note">
-                    No browser wallet detected. Use an EVM wallet extension
-                    here, or open Blunts in your mobile wallet’s browser.
-                  </p>
-                  {mobileHandoff ? (
-                    <>
-                      <a
-                        className="evm-wallet-handoff"
-                        href={mobileHandoff}
-                        target="_blank"
-                        rel="noreferrer"
+                <>
+                  {native && import.meta.env.VITE_NATIVE_BUILD === "true" && (
+                    <div className="evm-native-connect">
+                      <button
+                        className="primary"
+                        disabled={busy}
+                        onClick={() => void connectNative()}
                       >
-                        Open in MetaMask mobile
-                      </a>
+                        {nativeConnecting
+                          ? "Waiting for MetaMask…"
+                          : "Connect MetaMask app"}
+                      </button>
+                      {nativeConnecting && (
+                        <button onClick={() => nativeAttempt.current?.abort()}>
+                          Cancel connection
+                        </button>
+                      )}
                       <p className="evm-fine">
-                        Opens this app’s public address in MetaMask. Connect
-                        there to continue. Browser history and saved reviews
-                        stay separate.
+                        Connect your public account in the MetaMask app. Wallet
+                        signing stays disabled in this native preview.
                       </p>
-                    </>
-                  ) : (
-                    <p className="evm-fine">
-                      This localhost preview cannot be opened on another device.
-                      A public HTTPS app address is needed for mobile handoff;
-                      nothing has been published.
-                    </p>
+                    </div>
                   )}
-                </div>
+                  {wallets.length ? (
+                    wallets.map((w) => (
+                      <button
+                        className="evm-wallet-choice"
+                        key={w.id}
+                        disabled={busy}
+                        onClick={() => void connect(w)}
+                      >
+                        <Wallet size={20} />
+                        {w.name}
+                      </button>
+                    ))
+                  ) : !native ? (
+                    <div className="evm-wallet-help">
+                      <p className="evm-note">
+                        No browser wallet detected. Use an EVM wallet extension
+                        here, or open Blunts in your mobile wallet’s browser.
+                      </p>
+                      {mobileHandoff ? (
+                        <>
+                          <a
+                            className="evm-wallet-handoff"
+                            href={mobileHandoff}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open in MetaMask mobile
+                          </a>
+                          <p className="evm-fine">
+                            Opens this app’s public address in MetaMask. Connect
+                            there to continue. Browser history and saved reviews
+                            stay separate.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="evm-fine">
+                          This localhost preview cannot be opened on another
+                          device. A public HTTPS app address is needed for
+                          mobile handoff; nothing has been published.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+                </>
               )}
               <p className="evm-fine">
                 Connecting only requests your public address. Blunts never asks
