@@ -124,7 +124,7 @@ export class SwapJournal {
 export type WalletRpc = {
   request(args: { method: string; params?: unknown[] }): Promise<any>;
 };
-export type ForkReader = {
+export type ExecutionReader = {
   getChainId(): Promise<number>;
   getTransactionCount(args: {
     address: Address;
@@ -137,38 +137,54 @@ export type ForkReader = {
     value: bigint;
   }): Promise<unknown>;
 };
-/** Test-only writer: hard-requires chain 31337 on BOTH transports. There is no
- * mainnet policy/flag. Use only a loopback Anvil wallet. The public app does not
- * import this writer. Every step is separately requested; no automatic next leg. */
-export async function submitForkStep(
+function verifyExecutionPlan(plan: SwapPlan) {
+  const canonical = swapPlan(
+    plan.quote,
+    plan.owner,
+    plan.calls[0]?.kind === "reset"
+      ? 1n
+      : plan.calls[0]?.kind === "approve"
+        ? 0n
+        : plan.amountIn,
+  );
+  if (
+    canonical.id !== plan.id ||
+    JSON.stringify(canonical.calls) !== JSON.stringify(plan.calls)
+  )
+    throw Error("Wallet plan was changed. Prepare again.");
+  return canonical;
+}
+export type ExecutionPolicy = {
+  chainId: 4663 | 31337;
+  enabled: boolean;
+  preflight?: (plan: SwapPlan, step: number) => Promise<void>;
+};
+/** Every request is explicit and single-step. Defaults to the isolated fork.
+ * Mainnet additionally requires an enabled policy and a fresh preflight.
+ * The shipped local UI policy remains disabled. */
+export async function submitSwapStep(
   plan: SwapPlan,
   step: number,
   wallet: WalletRpc,
-  reader: ForkReader,
+  reader: ExecutionReader,
   journal: SwapJournal,
   locked: <T>(fn: () => Promise<T>) => Promise<T>,
+  policy: ExecutionPolicy = { chainId: 31337, enabled: true },
 ): Promise<SwapAttempt> {
+  if (
+    !policy.enabled ||
+    ![31337, 4663].includes(policy.chainId) ||
+    (policy.chainId === 4663 && !policy.preflight)
+  )
+    throw Error("Wallet execution is disabled or missing required preflight.");
   return locked(async () => {
-    const canonical = swapPlan(
-      plan.quote,
-      plan.owner,
-      plan.calls[0]?.kind === "reset"
-        ? 1n
-        : plan.calls[0]?.kind === "approve"
-          ? 0n
-          : plan.amountIn,
-    );
+    const canonical = verifyExecutionPlan(plan);
     if (
-      canonical.id !== plan.id ||
-      JSON.stringify(canonical.calls) !== JSON.stringify(plan.calls)
+      journal.chainId !== policy.chainId ||
+      (await reader.getChainId()) !== policy.chainId ||
+      Number(await wallet.request({ method: "eth_chainId" })) !== policy.chainId
     )
-      throw Error("Wallet plan was changed. Prepare again.");
-    if (
-      journal.chainId !== 31337 ||
-      (await reader.getChainId()) !== 31337 ||
-      Number(await wallet.request({ method: "eth_chainId" })) !== 31337
-    )
-      throw Error("Fork execution requires isolated chain 31337.");
+      throw Error("Execution wallet and reader must match the approved chain.");
     const accounts = await wallet.request({ method: "eth_accounts" });
     if (
       !Array.isArray(accounts) ||
@@ -203,10 +219,11 @@ export async function submitForkStep(
         (r) =>
           r.planId === plan.id &&
           r.step === step - 1 &&
-          r.state === "confirmed",
+          r.state === (policy.chainId === 31337 ? "confirmed" : "included"),
       )
     )
       throw Error("Confirm the previous wallet step first.");
+    await policy.preflight?.(plan, step);
     await reader.call({
       account: plan.owner,
       to: call.to,
@@ -217,17 +234,30 @@ export async function submitForkStep(
       address: plan.owner,
       blockTag: "pending",
     });
+    // The wallet may have changed while preflight was running.
+    const currentAccounts = await wallet.request({ method: "eth_accounts" });
+    if (
+      !Array.isArray(currentAccounts) ||
+      currentAccounts[0]?.toLowerCase() !== plan.owner.toLowerCase() ||
+      Number(await wallet.request({ method: "eth_chainId" })) !== policy.chainId
+    )
+      throw Error("Wallet changed during preflight. Prepare again.");
     const record: SwapAttempt = {
       planId: plan.id,
       step,
       owner: plan.owner,
-      chainId: 31337,
+      chainId: policy.chainId,
       call,
       nonce,
       state: "awaiting_wallet",
     };
     if (plan.quote.expiresAt <= Date.now())
       throw Error("Quote expired. Prepare again.");
+    if (
+      verifyExecutionPlan(plan).id !== canonical.id ||
+      JSON.stringify(call) !== JSON.stringify(canonical.calls[step])
+    )
+      throw Error("Wallet plan changed during preflight. Prepare again.");
     // Persistence must succeed before a wallet can possibly broadcast.
     journal.save(record);
     let returnedHash: unknown;
@@ -240,7 +270,7 @@ export async function submitForkStep(
             to: call.to,
             data: call.data,
             value: "0x0",
-            chainId: "0x7a69",
+            chainId: `0x${policy.chainId.toString(16)}`,
             nonce: `0x${nonce.toString(16)}`,
           },
         ],

@@ -301,3 +301,12 @@ on account/network changes and provider disconnect. Delayed quote responses can
 no longer restore old-context reviews. Public market reads have a 15-second
 browser deadline, no overlap, and visible-tab resume refresh. No wallet writes,
 automatic reconnect or real-money retries were introduced.
+
+Latest execution work adds a policy-gated single-step executor and a composed
+real-wallet adapter, **frozen disabled** and not imported by the preview UI. Five
+offline policy tests prove no wallet/storage access while disabled and rejection
+on failed preflight/account/plan changes. A fresh isolated chain-31337 fork from
+source block 100034744 passed reset/approve/buy/sell plus unknown-response recovery.
+The fork node was stopped; no real-wallet or mainnet execution was performed.
+The adapter still needs owner-approved activation and visible confirmation UX;
+its source file existing is not proof of enabled or accepted mainnet trading.

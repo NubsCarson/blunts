@@ -4,11 +4,11 @@ import { decodeFunctionData, getAddress, type Address, type Hex } from "viem";
 import { swapPlan, approvalAbi, routerAbi } from "../shared/swap-plan.js";
 import {
   SwapJournal,
-  submitForkStep,
+  submitSwapStep,
   reconcileSwapAttempt,
   type JournalStorage,
   type ReceiptReader,
-  type ForkReader,
+  type ExecutionReader,
   type WalletRpc,
   type SwapAttempt,
 } from "../shared/swap-journal.js";
@@ -51,7 +51,7 @@ function lock() {
 function fixture(storage: JournalStorage = store()) {
   let sent = 0;
   const journal = new SwapJournal(storage, owner);
-  const reader: ForkReader = {
+  const reader: ExecutionReader = {
     getChainId: async () => 31337,
     getTransactionCount: async () => 7,
     call: async () => ({}),
@@ -140,7 +140,7 @@ test("fork writer refuses mainnet, mismatched wallet, changed calldata and faile
     }
     if (kind === "call") plan.calls[0].to = stock.address;
     await assert.rejects(
-      submitForkStep(plan, 0, f.wallet, f.reader, f.journal, f.locked),
+      submitSwapStep(plan, 0, f.wallet, f.reader, f.journal, f.locked),
     );
     assert.equal(f.sent(), 0);
   }
@@ -149,8 +149,8 @@ test("one concurrent request broadcasts and an unknown wallet response survives 
   const f = fixture(),
     plan = swapPlan(quote(), owner, 0n);
   const results = await Promise.allSettled([
-    submitForkStep(plan, 0, f.wallet, f.reader, f.journal, f.locked),
-    submitForkStep(plan, 0, f.wallet, f.reader, f.journal, f.locked),
+    submitSwapStep(plan, 0, f.wallet, f.reader, f.journal, f.locked),
+    submitSwapStep(plan, 0, f.wallet, f.reader, f.journal, f.locked),
   ]);
   assert.equal(f.sent(), 1);
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
@@ -162,7 +162,7 @@ test("one concurrent request broadcasts and an unknown wallet response survives 
       throw Error("response lost after broadcast");
     return response;
   };
-  const unknown = await submitForkStep(
+  const unknown = await submitSwapStep(
     plan,
     0,
     u.wallet,
@@ -175,7 +175,7 @@ test("one concurrent request broadcasts and an unknown wallet response survives 
   const reloaded = new SwapJournal(u.storage, owner);
   assert.equal(reloaded.read()[0].state, "unknown");
   await assert.rejects(
-    submitForkStep(
+    submitSwapStep(
       swapPlan({ ...quote(), expiresAt: Date.now() + 21000 }, owner, 0n),
       0,
       u.wallet,
@@ -196,20 +196,20 @@ test("one concurrent request broadcasts and an unknown wallet response survives 
   };
   const d = fixture(failingDisk);
   await assert.rejects(
-    submitForkStep(plan, 0, d.wallet, d.reader, d.journal, d.locked),
+    submitSwapStep(plan, 0, d.wallet, d.reader, d.journal, d.locked),
   );
   assert.equal(d.sent(), 1);
   const retained = new SwapJournal(disk, owner);
   assert.equal(retained.read()[0].state, "awaiting_wallet");
   await assert.rejects(
-    submitForkStep(plan, 0, d.wallet, d.reader, retained, d.locked),
+    submitSwapStep(plan, 0, d.wallet, d.reader, retained, d.locked),
   );
   assert.equal(d.sent(), 1);
 });
 test("receipt recovery verifies sender, nonce and calldata; RPC outage does not invent a reorg", async () => {
   const f = fixture(),
     plan = swapPlan(quote(), owner, 0n);
-  const attempt = await submitForkStep(
+  const attempt = await submitSwapStep(
     plan,
     0,
     f.wallet,
@@ -251,7 +251,7 @@ test("receipt recovery verifies sender, nonce and calldata; RPC outage does not 
     "reorged",
   );
   const m = fixture(),
-    pending = await submitForkStep(
+    pending = await submitSwapStep(
       plan,
       0,
       m.wallet,

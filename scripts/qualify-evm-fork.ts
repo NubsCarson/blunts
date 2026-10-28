@@ -21,7 +21,7 @@ import {
 import { prepareSwap } from "../app/client/prepare-swap.js";
 import {
   SwapJournal,
-  submitForkStep,
+  submitSwapStep,
   reconcileSwapAttempt,
   type WalletRpc,
   type SwapAttempt,
@@ -129,7 +129,7 @@ async function execute(side: "fill" | "spark", amount: string) {
   const plan = await prepareSwap(q, owner, client, 31337);
   const attempts: SwapAttempt[] = [];
   for (let i = 0; i < plan.calls.length; i++) {
-    let attempt = await submitForkStep(
+    let attempt = await submitSwapStep(
       plan,
       i,
       wallet,
@@ -212,7 +212,7 @@ const losingWallet: WalletRpc = {
     return value;
   },
 };
-const unknown = await submitForkStep(
+const unknown = await submitSwapStep(
   lostPlan,
   0,
   losingWallet,
@@ -226,7 +226,7 @@ await client.waitForTransactionReceipt({ hash: lostHash });
 journal = new SwapJournal(storage, owner);
 let duplicateBlocked = false;
 try {
-  await submitForkStep(lostPlan, 0, losingWallet, client, journal, locked);
+  await submitSwapStep(lostPlan, 0, losingWallet, client, journal, locked);
 } catch {
   duplicateBlocked = true;
 }

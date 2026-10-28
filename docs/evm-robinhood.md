@@ -392,3 +392,57 @@ passed. All six final browser cases passed across Chromium, mobile Chromium and
 WebKit with delayed quote/network/disconnect coverage. The backend was not changed
 in this checkpoint; the prior full 58-pass/two-skip receipt remains separately
 identified. Mainnet signing and physical mobile-wallet acceptance remain open.
+
+## Disabled real-wallet execution adapter
+
+The single-step executor now accepts either isolated chain 31337 or an explicit
+chain-4663 policy. The mainnet-shaped path **requires** `enabled=true` and a fresh
+preflight callback; absent either, it rejects before calling the wallet, storage
+or lock operation. Both reader/wallet chain IDs must match the journal policy.
+After preflight and RPC reads, the wallet identity is checked again and the entire
+plan is rebuilt/compared before persistence. Mutated calldata or quote limits
+cannot cross that boundary. Every outgoing request pins chain, nonce, own-wallet
+sender, exact canonical target/calldata and zero ETH value. Only one step is
+requested; no subsequent approval or swap is auto-submitted. Mainnet approval
+progress relies on verified L2 inclusion, not a claim of Ethereum finality.
+
+`app/client/wallet-execution.ts` composes fresh public market/chain preflight,
+current allowance/balance/pool checks, reference/slippage limits, exact-call
+matching, next-step ETH readiness, the exclusive browser lock and durable attempt
+journal. Its local policy is **frozen disabled** in source. No environment, URL,
+localStorage or server setting enables it. The UI does not import the adapter,
+and the execution helper is removed from the browser bundle. This is prepared
+code for review, not an enabled trading feature or a completed real-wallet test.
+Enabling it still requires the owner's scoped approval and a reviewed source
+change; it must not be advertised as available in the current preview.
+
+Five new offline tests cover the disabled gate before any wallet/storage access,
+missing policy/preflight, persist-before-wallet behavior, explicit owner/chain/
+calldata, failed preflight, wallet changes during reads and plan mutation while
+preflight runs. The chain-4663 requests in those tests are in-memory fixtures:
+no HTTP provider, real signature, private key or mainnet funds are involved.
+They qualify the generic executor, not actual mainnet execution or the complete
+composed adapter after future activation.
+
+The renamed executor was also exercised against a fresh isolated fork sourced
+from Robinhood block **100034744**. The latest receipt,
+`data/review-20261028/evm/fork-cycle-1793186491328.json`, includes an existing
+insufficient allowance, so the buy used **reset → finite approval → swap**, followed
+by sell approval/swap and one deliberately lost approval response. Six local
+requests and six serialized records were retained. QQQ returned to zero and the
+unknown-response replay was blocked. All writes were to loopback chain 31337.
+The Anvil process was stopped after the receipt; no mainnet write occurred.
+
+The remaining gates are owner approval/eligibility and explicit local activation,
+visible wallet-confirmation/cancellation/replacement UX, real-wallet signature and
+receipt proof, L1 finality policy, mobile external-wallet continuation, native
+qualification, fee/business-policy review and release approval. This checkpoint
+must not be marked fully complete or release-ready on the basis of offline tests.
+
+Final execution checkpoint checks: build/typecheck and full backend suite passed
+**63 cases with two optional integration skips**. Five new execution-policy tests
+are included in that count. Six browser cases passed; the final rebuilt browser
+entry retained the same `index-CEZqcSO2.js` output because the dormant execution
+adapter/writer is not imported by the UI. A build-content check found no executor
+chain-approval error string. Formatting and whitespace checks passed. These
+checks do not replace the explicit missing real-wallet/mobile/finality receipts.
