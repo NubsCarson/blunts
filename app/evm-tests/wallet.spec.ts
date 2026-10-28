@@ -191,7 +191,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
   await expect(page.locator(".scene-value")).toHaveText("$770.00");
   await page.getByRole("button", { name: "Fill", exact: true }).click();
   await page.getByRole("button", { name: "Preview swap", exact: true }).click();
-  await expect(page.getByText("0.035 QQQ", { exact: true })).toBeVisible();
+  await expect(page.getByText("0.03465 QQQ", { exact: true })).toBeVisible();
   await expect(
     page.getByText(
       "Local wallet signing is enabled. Approval or swap requests can move real funds only after you approve in your wallet.",
@@ -223,6 +223,14 @@ test("wallet-first preview connects without signup, reads balances and never sen
   await expect(
     page.getByText("Robinhood Chain · 4663", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText("0.03447675 QQQ", { exact: true })).toBeVisible();
+  await expect(page.getByText("0.00035 QQQ", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link").filter({ hasText: /^0x4a27/i }),
+  ).toHaveAttribute(
+    "href",
+    /address\/0x4a27c325de7629c6bbd187e1e456b56c82e73073/i,
+  );
   const firstStep = page.getByRole("region", { name: "Transaction step 1" });
   await expect(firstStep.getByText("25 USDG", { exact: true })).toBeVisible();
   await expect(

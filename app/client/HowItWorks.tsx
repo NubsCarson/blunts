@@ -74,7 +74,7 @@ const walletLessons = [
   },
   {
     title: "Check before you roll.",
-    body: "Review the quote, minimum received, pool costs and ETH fee estimate. Approvals grant only the amount shown. Investments and stablecoins carry risk, prices can change, and stock-token eligibility restrictions apply, including exclusion of US persons.",
+    body: "Fill and Spark each take 1% of the tokens received. Review the amount after this fee, minimum received, pool costs and ETH gas estimate. Approvals grant only the amount shown. Investments and stablecoins carry risk, prices can change, and stock-token eligibility restrictions apply, including exclusion of US persons.",
     facts: [],
   },
   {

@@ -5,6 +5,7 @@ import {
   type Address,
   type Hex,
 } from "viem";
+import { appFee } from "../shared/app-fee";
 import { cash, stock, dex } from "../shared/robinhood";
 import { approvalAbi, routerAbi, type SwapCall } from "../shared/swap-plan";
 import {
@@ -43,14 +44,35 @@ export function supportedWalletCall(
   if (to.toLowerCase() !== dex.router.toLowerCase())
     throw Error("Unsupported router.");
   const outer = decodeFunctionData({ abi: routerAbi, data: input });
-  if (outer.functionName !== "multicall" || outer.args[1].length !== 1)
+  if (
+    outer.functionName !== "multicall" ||
+    ![1, 2].includes(outer.args[1].length)
+  )
     throw Error("Unsupported swap batch.");
   const inner = decodeFunctionData({ abi: routerAbi, data: outer.args[1][0] });
   if (inner.functionName !== "exactInputSingle")
     throw Error("Unsupported swap call.");
   const p = inner.args[0];
+  // Retain read-only tracking of the earlier fee-free single-call route.
+  const withFee = outer.args[1].length === 2;
+  if (withFee) {
+    const sweep = decodeFunctionData({
+      abi: routerAbi,
+      data: outer.args[1][1],
+    });
+    if (
+      sweep.functionName !== "sweepTokenWithFee" ||
+      sweep.args[0].toLowerCase() !== p.tokenOut.toLowerCase() ||
+      sweep.args[1] !== p.amountOutMinimum ||
+      sweep.args[2].toLowerCase() !== owner.toLowerCase() ||
+      sweep.args[3] !== appFee.bps ||
+      sweep.args[4].toLowerCase() !== appFee.recipient.toLowerCase()
+    )
+      throw Error("App fee or output recipient did not match.");
+  }
   if (
-    p.recipient.toLowerCase() !== owner.toLowerCase() ||
+    p.recipient.toLowerCase() !==
+      (withFee ? dex.router : owner).toLowerCase() ||
     p.sqrtPriceLimitX96 !== 0n ||
     p.amountIn <= 0n ||
     p.amountOutMinimum <= 0n ||

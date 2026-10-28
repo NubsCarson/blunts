@@ -9,6 +9,8 @@ import {
   http,
   parseAbi,
   encodeFunctionData,
+  decodeEventLog,
+  decodeFunctionData,
   formatUnits,
   type Address,
   type Hex,
@@ -16,6 +18,8 @@ import {
 import { mkdir, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { cash, stock, dex, robinhood } from "../app/shared/robinhood.js";
+import { appFee, feeOnOutput } from "../app/shared/app-fee.js";
+import { approvalAbi, routerAbi } from "../app/shared/swap-plan.js";
 import { supportedWalletCall } from "../app/client/transaction-activity.js";
 const endpoint = "http://127.0.0.1:8752",
   app = "http://localhost:8753";
@@ -83,6 +87,17 @@ const balance = async (token: Address) =>
     functionName: "balanceOf",
     args: [owner],
   });
+const feeBalance = (token: Address) =>
+  client.readContract({
+    address: token,
+    abi: parseAbi(["function balanceOf(address) view returns(uint256)"]),
+    functionName: "balanceOf",
+    args: [appFee.recipient],
+  });
+const feeBefore = {
+  qqq: await feeBalance(stock.address),
+  usdg: await feeBalance(cash.address),
+};
 const before = await balance(cash.address),
   sends: { hash: Hex; transaction: unknown }[] = [];
 const uiRequestCount = () => sends.length;
@@ -288,12 +303,138 @@ try {
   );
   if (receipts.some((r) => r.status !== "success"))
     throw Error("Fork transaction reverted.");
+  const feeProof = [];
+  for (const [index, token] of [
+    [1, stock.address],
+    [3, cash.address],
+  ] as const) {
+    const transfers = receipts[index].logs.flatMap((log) => {
+      if (log.address.toLowerCase() !== token.toLowerCase()) return [];
+      try {
+        const event = decodeEventLog({
+          abi: parseAbi([
+            "event Transfer(address indexed from,address indexed to,uint256 value)",
+          ]),
+          data: log.data,
+          topics: log.topics,
+        });
+        return [event.args];
+      } catch {
+        return [];
+      }
+    });
+    const toFee = transfers.filter(
+      (t) =>
+        t.from.toLowerCase() === dex.router.toLowerCase() &&
+        t.to.toLowerCase() === appFee.recipient.toLowerCase(),
+    );
+    const toOwner = transfers.filter(
+      (t) =>
+        t.from.toLowerCase() === dex.router.toLowerCase() &&
+        t.to.toLowerCase() === owner.toLowerCase(),
+    );
+    if (
+      toFee.length !== 1 ||
+      toOwner.length !== 1 ||
+      toFee[0].value <= 0n ||
+      feeOnOutput(toFee[0].value + toOwner[0].value).fee !== toFee[0].value
+    )
+      throw Error("Incorrect atomic fee transfers.");
+    feeProof.push({
+      token,
+      gross: String(toFee[0].value + toOwner[0].value),
+      fee: String(toFee[0].value),
+      net: String(toOwner[0].value),
+      hash: receipts[index].transactionHash,
+    });
+  }
+  if (
+    (await feeBalance(stock.address)) - feeBefore.qqq !==
+      BigInt(feeProof[0].fee) ||
+    (await feeBalance(cash.address)) - feeBefore.usdg !==
+      BigInt(feeProof[1].fee)
+  )
+    throw Error("Fee recipient balance delta disagreed with receipts.");
+
+  // Separate signed harness test: approve 1 virtual USDG, then force an impossible
+  // output minimum. The mined revert must preserve both holders' token balances.
+  const approvalHash = await testWallet.sendTransaction({
+    to: cash.address,
+    data: encodeFunctionData({
+      abi: approvalAbi,
+      functionName: "approve",
+      args: [dex.router, 1000000n],
+    }),
+    value: 0n,
+  });
+  if (
+    (await client.waitForTransactionReceipt({ hash: approvalHash })).status !==
+    "success"
+  )
+    throw Error("Failure-case approval failed.");
+  const originalBuy = decodeFunctionData({
+    abi: routerAbi,
+    data: (sends[1].transaction as any).data,
+  });
+  if (originalBuy.functionName !== "multicall")
+    throw Error("Missing buy batch.");
+  const originalSwap = decodeFunctionData({
+    abi: routerAbi,
+    data: originalBuy.args[1][0],
+  });
+  if (originalSwap.functionName !== "exactInputSingle")
+    throw Error("Missing buy swap.");
+  const tooHigh = 10n ** 36n;
+  const failureData = encodeFunctionData({
+    abi: routerAbi,
+    functionName: "multicall",
+    args: [
+      BigInt(Math.floor(Date.now() / 1000) + 60),
+      [
+        encodeFunctionData({
+          abi: routerAbi,
+          functionName: "exactInputSingle",
+          args: [
+            {
+              ...originalSwap.args[0],
+              amountIn: 1000000n,
+              amountOutMinimum: tooHigh,
+            },
+          ],
+        }),
+        encodeFunctionData({
+          abi: routerAbi,
+          functionName: "sweepTokenWithFee",
+          args: [stock.address, tooHigh, owner, appFee.bps, appFee.recipient],
+        }),
+      ],
+    ],
+  });
+  const failedHash = await testWallet.sendTransaction({
+    to: dex.router,
+    data: failureData,
+    value: 0n,
+    gas: 500000n,
+  });
+  const failureReceipt = await client.waitForTransactionReceipt({
+    hash: failedHash,
+  });
+  if (
+    failureReceipt.status !== "reverted" ||
+    (await balance(cash.address)) !== after ||
+    (await balance(stock.address)) !== stockAfter ||
+    (await feeBalance(stock.address)) - feeBefore.qqq !==
+      BigInt(feeProof[0].fee) ||
+    (await feeBalance(cash.address)) - feeBefore.usdg !==
+      BigInt(feeProof[1].fee)
+  )
+    throw Error("Failed swap charged a fee or moved tokens.");
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await assertFork();
   await rpc("evm_setAutomine", [false]);
   miningPaused = true;
   await page.getByRole("button", { name: "Fill", exact: true }).click();
-  await page.getByLabel("USDG to spend", { exact: true }).fill("1");
+  await page.getByLabel("USDG to spend", { exact: true }).fill("2");
   await page.getByRole("button", { name: "Preview swap", exact: true }).click();
   await page
     .getByRole("button", { name: "Review wallet steps", exact: true })
@@ -302,7 +443,7 @@ try {
   await signing.getByRole("checkbox").check();
   await signing
     .getByRole("button", {
-      name: "Approve exact amount in wallet",
+      name: "Clear allowance in wallet",
       exact: true,
     })
     .click();
@@ -407,6 +548,23 @@ try {
         after: formatUnits(after, 6),
         stockAfter: String(stockAfter),
         walletRequests: sends,
+        appFee: {
+          bps: "100",
+          recipient: appFee.recipient,
+          outputTransfers: feeProof,
+          recipientBalancesVerified: true,
+        },
+        revertedSwap: {
+          hash: failedHash,
+          approvalHash,
+          status: failureReceipt.status,
+          blockHash: failureReceipt.blockHash,
+          blockNumber: String(failureReceipt.blockNumber),
+          noTokenMovement: true,
+          noBluntsFee: true,
+          ethGasCharged: true,
+        },
+        signedHarnessFeeFailureRequests: 2,
         receipts: receipts.map((r) => ({
           hash: r.transactionHash,
           status: r.status,

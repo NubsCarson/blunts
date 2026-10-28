@@ -1,3 +1,4 @@
+import { appFee, quoteAfterFee } from "../shared/app-fee";
 import { formatUnits } from "viem";
 import { verifiedSwapPlan, type SwapPlan } from "../shared/swap-plan";
 import { cash, stock, dex, robinhood } from "../shared/robinhood";
@@ -68,8 +69,7 @@ export function WalletStepDetails({
               </dd>
               <dt>You receive at least</dt>
               <dd>
-                {formatUnits(verified.minimumOut, output.decimals)}{" "}
-                {output.symbol}
+                {quoteAfterFee(verified.quote).minimumOut} {output.symbol}
               </dd>
               <dt>Output recipient</dt>
               <dd>{addressLink(verified.owner)}</dd>
@@ -79,6 +79,17 @@ export function WalletStepDetails({
                   Math.floor(verified.quote.expiresAt / 1000) * 1000,
                 ).toLocaleString()}
               </dd>
+              <dt>Blunts fee</dt>
+              <dd>
+                1% of received {output.symbol} · deducted atomically; rounded
+                down to token units
+              </dd>
+              <dt>Estimated Blunts fee</dt>
+              <dd>
+                {quoteAfterFee(verified.quote).feeAmount} {output.symbol}
+              </dd>
+              <dt>Blunts fee recipient</dt>
+              <dd>{addressLink(appFee.recipient)}</dd>
               <dt>Pool fee</dt>
               <dd>{verified.quote.fee / 10000}%</dd>
               <dt>Router contract</dt>
@@ -102,8 +113,10 @@ export function WalletStepDetails({
         </section>
       ))}
       <p className="evm-fine">
-        If a wallet prompt differs from this review, reject it. Reviewing these
-        details never opens a wallet prompt.
+        The swap and fee succeed or revert together. A reverted swap charges no
+        Blunts fee; ETH gas can still be charged. If a wallet prompt differs
+        from this review, reject it. Reviewing these details never opens a
+        wallet prompt.
       </p>
     </details>
   );

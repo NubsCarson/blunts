@@ -1,3 +1,4 @@
+import { quoteAfterFee } from "../shared/app-fee";
 import { executionPolicyForOrigin } from "../shared/execution-policy";
 import { WalletSigning } from "./WalletSigning";
 import { useEffect, useRef, useState } from "react";
@@ -642,8 +643,8 @@ export function EvmApp() {
               <p>
                 This local version reads real market data and previews swaps. It
                 only requests a transaction after you choose a step and approve
-                in your wallet. No Blunts fee is charged and bank withdrawals
-                are not connected.
+                in your wallet. Blunts takes 1% of the tokens received on each
+                swap. Bank withdrawals are not connected.
               </p>
               <p>
                 QQQ tokens provide economic exposure; they are not direct
@@ -703,23 +704,27 @@ export function EvmApp() {
                   <div>
                     <span>You receive approximately</span>
                     <strong>
-                      {quote.amountOut} {panel === "fill" ? "QQQ" : "USDG"}
+                      {quoteAfterFee(quote).amountOut}{" "}
+                      {panel === "fill" ? "QQQ" : "USDG"}
                     </strong>
                   </div>
                   <p>
-                    Minimum {quote.minimumOut}{" "}
+                    Minimum {quoteAfterFee(quote).minimumOut}{" "}
                     {panel === "fill" ? "QQQ" : "USDG"} · 0.5% slippage
                   </p>
                   <p>
-                    Uniswap pool fee {quote.fee / 10000}% · No Blunts fee in
-                    this preview
+                    Blunts fee 1% · approximately{" "}
+                    {quoteAfterFee(quote).feeAmount}{" "}
+                    {quoteAfterFee(quote).symbol}, already deducted above.
+                    Uniswap pool fee {quote.fee / 10000}% and ETH gas are
+                    separate.
                   </p>
                   {quote.referenceShortfallBps !== undefined && (
                     <p>
                       {quote.referenceShortfallBps === 0
                         ? "At or above the reference output"
                         : `${(quote.referenceShortfallBps / 100).toFixed(2)}% below reference output`}{" "}
-                      · includes pool costs
+                      · pool output before the Blunts fee
                     </p>
                   )}
                   <p>

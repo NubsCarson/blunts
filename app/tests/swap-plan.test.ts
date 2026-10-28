@@ -96,7 +96,8 @@ test("swap calldata fixes token pair, own recipient, exact finite approval, min 
   });
   assert.equal(inner.functionName, "exactInputSingle");
   const params = inner.args![0] as any;
-  assert.equal(params.recipient, owner);
+  assert.equal(params.recipient, getAddress(dex.router));
+  assert.equal((outer.args![1] as Hex[]).length, 2);
   assert.equal(params.tokenIn.toLowerCase(), cash.address.toLowerCase());
   assert.equal(params.tokenOut.toLowerCase(), stock.address.toLowerCase());
   assert.equal(params.amountOutMinimum, 34825000000000000n);

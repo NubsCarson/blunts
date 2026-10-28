@@ -9,6 +9,7 @@ import {
 } from "viem";
 import { z } from "zod";
 import { amountUnits, cash, dex, stock, type SwapQuote } from "./robinhood.js";
+import { appFee } from "./app-fee.js";
 export const approvalAbi = parseAbi([
   "function approve(address spender,uint256 amount) returns(bool)",
   "function allowance(address owner,address spender) view returns(uint256)",
@@ -16,6 +17,7 @@ export const approvalAbi = parseAbi([
 export const routerAbi = parseAbi([
   "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns(uint256 amountOut)",
   "function multicall(uint256 deadline,bytes[] data) payable returns(bytes[] results)",
+  "function sweepTokenWithFee(address token,uint256 amountMinimum,address recipient,uint256 feeBips,address feeRecipient) payable",
 ]);
 const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 const quoteSchema = z
@@ -49,7 +51,7 @@ export type SwapPlan = {
   minimumOut: bigint;
   calls: SwapCall[];
 };
-/** Only fixed canonical tokens/router, finite approvals, own-wallet recipient and
+/** Only fixed canonical tokens/router, finite approvals, own-wallet net recipient, fixed 1% output fee and
  * an on-chain deadline. A plan is calldata, never a signature or broadcast. */
 export function swapPlan(
   raw: unknown,
@@ -103,12 +105,17 @@ export function swapPlan(
         tokenIn: input.address,
         tokenOut: output.address,
         fee: quote.fee,
-        recipient: account,
+        recipient: getAddress(dex.router),
         amountIn,
         amountOutMinimum: minimumOut,
         sqrtPriceLimitX96: 0n,
       },
     ],
+  });
+  const sweep = encodeFunctionData({
+    abi: routerAbi,
+    functionName: "sweepTokenWithFee",
+    args: [output.address, minimumOut, account, appFee.bps, appFee.recipient],
   });
   calls.push({
     kind: "swap",
@@ -117,7 +124,7 @@ export function swapPlan(
     data: encodeFunctionData({
       abi: routerAbi,
       functionName: "multicall",
-      args: [BigInt(Math.floor(quote.expiresAt / 1000)), [data]],
+      args: [BigInt(Math.floor(quote.expiresAt / 1000)), [data, sweep]],
     }),
   });
   const id = keccak256(
