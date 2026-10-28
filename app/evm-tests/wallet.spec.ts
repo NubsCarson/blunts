@@ -326,3 +326,61 @@ test("wallet-first preview connects without signup, reads balances and never sen
   ).toBeVisible();
   await expect(page.locator(".scene-value")).toHaveText("—");
 });
+
+test("wallet walkthrough explains the actual route and keeps preview-only boundaries", async ({
+  page,
+}) => {
+  await page.route("**/api/onchain/market", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { error: "Fixture market unavailable" },
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("button", { name: "How it works", exact: true }).click();
+  const walkthrough = page.getByRole("region", {
+    name: "How it works walkthrough",
+  });
+  await expect(
+    walkthrough.getByRole("heading", {
+      name: "Fill from your wallet.",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    walkthrough.getByRole("button", { name: "Back", exact: true }),
+  ).toBeDisabled();
+  await walkthrough.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    walkthrough.getByRole("heading", {
+      name: "10 blunts. One band.",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await walkthrough.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(walkthrough.getByText(/not direct ownership/)).toBeVisible();
+  await walkthrough.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(walkthrough.getByText(/exclusion of US persons/)).toBeVisible();
+  await walkthrough.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    walkthrough.getByRole("heading", {
+      name: "Spark back to USDG.",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    walkthrough.getByText(/does not withdraw dollars to a bank/),
+  ).toBeVisible();
+  await expect(
+    walkthrough.getByText("Local preview · signing and swaps disabled", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await walkthrough
+    .getByRole("button", { name: "Got it", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "How it works", exact: true }),
+  ).toBeVisible();
+});

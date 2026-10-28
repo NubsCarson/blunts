@@ -299,3 +299,21 @@ zero-ETH handling. They continue to record only connection/read wallet methods,
 never sign/send. An initial zero-ETH check exposed a fixed-value test fixture;
 the fixture was corrected and all three engines passed the corrected case.
 These browser checks use disposable fixture balances and hashes.
+
+## Post-crash resume and walkthrough
+
+The desktop crash preserved all uncommitted activity/fee changes. Those changes
+were recovered and committed as `7aa84c7`, without resetting history or data.
+The preview was restarted on loopback 8745; signing remains disabled.
+Fresh backend checks passed **55 tests, two integration skips** (PostgreSQL and
+actual Steward, which was not running after the crash). These skips do not
+invalidate or replace the earlier service-backed evidence.
+
+Menu → How it works now uses the same five-step component and visual system as
+Shaw's walkthrough, with wallet-specific copy: existing USDG funding, ETH gas,
+$100-value blunts/bands, token exposure rather than direct share ownership,
+risks/eligibility, and Spark returning USDG rather than a bank withdrawal. The
+legacy demo retains its own original lessons and fee explanation. Wallet lessons
+do not invent returns, a new fee, completed signing, or a bank cash-out feature.
+All five steps and return navigation passed across Chromium, mobile Chromium
+and WebKit alongside the wallet/activity/reload checks: **6 browser cases passed**.

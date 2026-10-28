@@ -274,3 +274,9 @@ by the crash and was restarted on loopback port 8745. Health confirms
 Fresh full checks passed 55 cases with two explicitly skipped integrations:
 optional PostgreSQL and actual local Steward (service not running on this resume).
 These are distinct from the earlier 56-pass run that included isolated Steward.
+
+Post-recovery next change: the five-step How it works flow is now adapted to the
+wallet route and accessible from Menu. The old simulator lessons remain available
+only in the legacy UI. The six browser cases cover the wallet lifecycle and all
+five lesson steps on three engines. No keys, transaction approvals, real funds,
+public hosting or social publishing were used during crash recovery.

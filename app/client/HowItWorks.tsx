@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { BluntIcon } from "./AmountPicker";
 
-const lessons = [
+const demoLessons = [
   {
     title: "Fill it up.",
     body: "Fill adds demo funds and invests them. The 1% conversion fee comes out of the amount you choose.",
@@ -47,7 +47,53 @@ const lessons = [
   },
 ];
 
-export function HowItWorks({ onDone }: { onDone: () => void }) {
+const walletLessons = [
+  {
+    title: "Fill from your wallet.",
+    body: "Connect an EVM wallet on Robinhood Chain. Fill previews a swap from USDG already in your wallet into Robinhood’s QQQ token. No email signup or card deposit is needed for this route.",
+    facts: [
+      ["USDG", "Swap funding"],
+      ["ETH", "Network fees"],
+    ],
+  },
+  {
+    title: "10 blunts. One band.",
+    body: "One whole blunt represents $100 of estimated QQQ-token value. Ten make a band. The tray follows your connected wallet’s holdings, so its value can rise or fall.",
+    facts: [
+      ["1 blunt", "$100 of value"],
+      ["1 band", "$1,000 of value"],
+    ],
+  },
+  {
+    title: "What’s inside?",
+    body: "The QQQ token tracks exposure to the Invesco QQQ ETF. It is an issuer debt security, not direct ownership of the underlying fund shares. Token balances stay in your EVM wallet.",
+    facts: [
+      ["QQQ token", "Economic exposure"],
+      ["Your wallet", "Token balance"],
+    ],
+  },
+  {
+    title: "Check before you roll.",
+    body: "Review the quote, minimum received, pool costs and ETH fee estimate. Approvals grant only the amount shown. Investments and stablecoins carry risk, prices can change, and stock-token eligibility restrictions apply, including exclusion of US persons.",
+    facts: [],
+  },
+  {
+    title: "Spark back to USDG.",
+    body: "Spark previews selling QQQ tokens back into USDG in the same wallet. It does not withdraw dollars to a bank. This local build previews and checks transactions only: wallet signing and swaps are disabled.",
+    facts: [
+      ["Spark", "QQQ → USDG"],
+      ["Local preview", "No funds move"],
+    ],
+  },
+];
+export function HowItWorks({
+  onDone,
+  mode = "demo",
+}: {
+  onDone: () => void;
+  mode?: "demo" | "wallet";
+}) {
+  const lessons = mode === "wallet" ? walletLessons : demoLessons;
   const [step, setStep] = useState(0);
   const start = useRef<{ x: number; y: number } | null>(null);
   const lesson = lessons[step];
@@ -113,7 +159,7 @@ export function HowItWorks({ onDone }: { onDone: () => void }) {
       <div className="how-lesson" aria-live="polite" aria-atomic="true">
         <h3>{lesson.title}</h3>
         <p>{lesson.body}</p>
-        {step === 2 && (
+        {step === 2 && mode === "demo" && (
           <details className="how-more">
             <summary>What is an ETF?</summary>
             <p>
@@ -162,7 +208,11 @@ export function HowItWorks({ onDone }: { onDone: () => void }) {
           {step < lessons.length - 1 ? "Next" : "Got it"}
         </button>
       </div>
-      <small>Demo only · no real money or investments</small>
+      <small>
+        {mode === "wallet"
+          ? "Local preview · signing and swaps disabled"
+          : "Demo only · no real money or investments"}
+      </small>
     </div>
   );
 }

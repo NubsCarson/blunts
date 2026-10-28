@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   RefreshCw,
 } from "lucide-react";
+import { HowItWorks } from "./HowItWorks";
 import { Tray } from "./Tray";
 import {
   robinhood,
@@ -52,9 +53,9 @@ export function EvmApp() {
       stock: bigint;
       eth: bigint;
     } | null>(null),
-    [panel, setPanel] = useState<"wallet" | "menu" | "fill" | "spark" | null>(
-      null,
-    ),
+    [panel, setPanel] = useState<
+      "wallet" | "menu" | "how" | "fill" | "spark" | null
+    >(null),
     [amount, setAmount] = useState("25"),
     [quote, setQuote] = useState<SwapQuote | null>(null),
     [prepared, setPrepared] = useState<SwapPlan | null>(null),
@@ -549,6 +550,7 @@ export function EvmApp() {
             </>
           ) : panel === "menu" ? (
             <>
+              <button onClick={() => setPanel("how")}>How it works</button>
               <h1>
                 Same ritual.
                 <br />
@@ -576,6 +578,8 @@ export function EvmApp() {
                 Token details & eligibility <ArrowUpRight size={14} />
               </a>
             </>
+          ) : panel === "how" ? (
+            <HowItWorks mode="wallet" onDone={() => setPanel("menu")} />
           ) : (
             <>
               <h1>
