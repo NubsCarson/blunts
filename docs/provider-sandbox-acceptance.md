@@ -75,6 +75,18 @@ manager, never in chat or Git. No keys, trades, checkout sessions, paid plans or
 live financial accounts were created. Email verification and the remaining
 provider onboarding steps are not established by submission of the signup form.
 
+The developer login screens were rechecked for an accessible alternative:
+Dinari offers email continuation and MoonPay's Business dashboard offers email
+verification. Neither inspected screen exposed a social sign-in choice.
+MoonPay's consumer Google/Apple sign-in does not establish Business dashboard
+access. A later MoonPay sign-in request returned "We could not verify that
+request"; Dinari accepted a fresh code request. Neither outcome verifies an
+account. Browser navigation to Gmail was completed for the owner; withheld
+authentication codes were not recovered through another surface. macOS Voice
+Control settings were prepared as a hands-free entry option, but enabling its
+microphone remains awaiting the owner's specific approval. It has not been
+enabled or claimed as a completed verification.
+
 After that access exists, qualify the sandbox and implement each actual account,
 quote, funding, order, settlement and withdrawal transition using the provider's
 enabled contract. The standalone simulator cannot safely be converted into a

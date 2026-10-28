@@ -51,6 +51,10 @@ Upstream has no open issues or pull requests as observed on October 27.
 - Replace the ambiguous dotted Fill mark with the same Lucide BanknoteArrowDown icon on both controls.
 - Validate malformed and excessive Fill/Spark amounts while the sheet is open.
 - Connect Cloud/direct Steward email sign-in, TOTP/SMS continuation, wallet provisioning, encrypted server-side tokens, issuer/subject binding, refresh leases and sign-out.
+- Add direct email-code resend, a one-minute cooldown, accurate six-digit email
+  validation and dictation focus after errors, resend and MFA continuation.
+  Browser requests now time out after 20 seconds without automatic retries;
+  timed-out money instructions remain subject to their durable recovery path.
 - Never replay a possibly consumed refresh token after a crash or timeout; require fresh sign-in without revoking the owner's unrelated sessions.
 - Reduce idle polling from 1.5 to 15 seconds, pause hidden tabs and preserve last verified balances on failure.
 - Identify simulated money before signup and in the action sheet; correct Help's
@@ -77,6 +81,20 @@ does not specify a repository license.
 
 ## Verified checks
 
+- October 27 sign-in recovery follow-up: nine targeted browser checks passed
+  across desktop Chromium, mobile Chromium and WebKit for an unanswered request
+  reaching the browser's own timeout, expired-code recovery, failed/successful
+  resend, cooldown and MFA code/focus handling. These are UI transport fixtures,
+  not external email delivery or owner-account verification. Serious/critical
+  accessibility checks passed on the email-code state; desktop and mobile
+  screenshots were visually inspected. TypeScript/Vite and formatting passed.
+- The new accepted-Fill timeout case and the existing lost-response cash-out
+  case passed on all three engines against the actual local simulator/API. No
+  automatic money replay occurred on timeout; reload used the same instruction
+  key and produced exactly one flow. The grouped money-recovery run passed eight
+  of nine cases; the remaining older WebKit case was rate-limited during signup,
+  before its money scenario. Its isolated WebKit rerun passed. Product rate
+  limits were not relaxed for the test batch.
 - 23 backend tests passed with actual isolated PostgreSQL 17.10 and the real local Steward service; no skips. The session-root controls verify restart stability, restrictive permissions, symlink refusal and preservation of rejected files.
 - The full browser suite passed 16 cases, with two intentional engine skips for the desktop-only full-motion scenario. After restoring cash-out behind Spark, its recovery case passed on all three engines.
 - The restored walkthrough separately passed on desktop Chromium, mobile Chromium
@@ -97,5 +115,8 @@ reconciliation and operational acceptance still require implementation and
 enabled provider access. Credentials alone do not implement those integrations.
 See README sections 5 and 6 for the owning integration and operation backlog.
 
-No provider registration, external account creation, token action, public post,
-push, PR, deployment or store submission is authorized by this local review.
+The owner subsequently authorized free developer signup setup and MoonPay's
+displayed signup terms. Both submissions reached email verification; the current
+access state is in [provider-sandbox-acceptance.md](provider-sandbox-acceptance.md).
+No token action, public post, push, PR, deployment or store submission is
+authorized by this local review.

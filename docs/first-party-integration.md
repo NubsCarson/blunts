@@ -68,6 +68,14 @@ does not establish non-custodial operation. Blunts exposes email login and
 TOTP/SMS continuation; it does not claim acceptance of every provider login
 method or physical biometric device.
 
+Email sign-in includes a resend action with a one-minute client cooldown, in
+addition to the server and issuer rate limits. An unsuccessful resend preserves
+the current code; a successful request clears it. Focus returns to the enabled
+code field after each attempt and MFA continuation, including for dictation.
+The browser transport aborts unanswered requests after 20 seconds and reports an
+uncertain result without automatically retrying. Existing durable money-flow
+instructions retain their original idempotency keys when a response is lost.
+
 Snapshot format 3 retains identity mappings but excludes all local sessions and
 encrypted upstream sessions. Restore requires a new empty database and fresh
 sign-in. Wallet-service backups remain separate from the Blunts ledger backup.
@@ -143,7 +151,11 @@ The owning code is still unfinished, not merely waiting for environment values.
 Testing must cover a complete eligible sandbox cycle and distributed failure
 windows before any authorized live pilot. Until then, this application's login
 and wallet integration is independently usable, but its investing objective
-remains incomplete. No new provider account or agreement was created/accepted.
+remains incomplete. The owner subsequently authorized free developer signup
+setup, including MoonPay's displayed terms; both forms reached email
+verification. See the current signup state in
+[provider-sandbox-acceptance.md](provider-sandbox-acceptance.md). No completed
+partner enrollment or enabled trading access has been observed.
 
 The selected engineering path is the existing Dinari/MoonPay candidate from
 Shaw's repository. Dinari's official `@dinari/api-sdk` is pinned to 0.15.0.

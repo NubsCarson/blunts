@@ -180,6 +180,41 @@ test("lost Fill response retries the same authorized instruction after reload", 
   expect(me.flows).toHaveLength(1);
   expect(me.intents).toHaveLength(2);
 });
+test("a timed-out Fill preserves the accepted instruction instead of creating another", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await signup(page);
+  const keys: string[] = [];
+  let accepted!: () => void;
+  const firstAccepted = new Promise<void>((resolve) => {
+    accepted = resolve;
+  });
+  await page.route("**/api/flows", async (route) => {
+    keys.push(route.request().headers()["idempotency-key"]);
+    if (keys.length === 1) {
+      await route.fetch();
+      accepted();
+      // The server accepted the instruction, but its response never arrives.
+      // The actual browser fetch must reach its timeout without any auto-retry.
+      return;
+    }
+    await route.continue();
+  });
+  await act(page, "Fill", "100");
+  await firstAccepted;
+  await page.clock.fastForward(20_001);
+  await expect(page.getByRole("alert")).toContainText("The request timed out");
+  expect(keys).toHaveLength(1);
+  await page.reload();
+  await expect(page.locator(".scene-value")).toHaveText("$99.00");
+  expect(keys.length).toBeGreaterThanOrEqual(2);
+  expect(new Set(keys).size).toBe(1);
+  const me = await (await page.request.get("/api/me")).json();
+  expect(me.flows).toHaveLength(1);
+  expect(me.intents).toHaveLength(2);
+});
+
 test("setup overlays the tray and backup lives in help", async ({ page }) => {
   await page.goto("/");
   await expect(

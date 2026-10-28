@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Challenge = { type: "totp" | "sms"; challengeId: string };
 type LoginResult = { csrf?: string; mfaRequired?: boolean; mfa?: Challenge };
@@ -18,15 +18,52 @@ export function StewardLogin({
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [resendAt, setResendAt] = useState(0);
+  const [notice, setNotice] = useState("");
+  const inFlight = useRef(false);
+  const codeInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (sent && !busy) codeInput.current?.focus();
+  }, [sent, challenge, busy]);
+  useEffect(() => {
+    if (!resendAt) return;
+    const timer = window.setTimeout(
+      () => setResendAt(0),
+      Math.max(0, resendAt - Date.now()),
+    );
+    return () => window.clearTimeout(timer);
+  }, [resendAt]);
+  async function sendEmailCode() {
+    await api("/auth/steward/send", { email });
+    setSent(true);
+    setCode("");
+    setResendAt(Date.now() + 60_000);
+    setNotice("Email code requested. Check your inbox and spam folder.");
+  }
+  async function resend() {
+    if (inFlight.current || challenge || resendAt > Date.now()) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await sendEmailCode();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError("");
     try {
       if (!sent) {
-        await api("/auth/steward/send", { email });
-        setSent(true);
+        await sendEmailCode();
       } else {
         const result = await api<LoginResult>(
           challenge ? "/auth/steward/mfa" : "/auth/steward/verify",
@@ -35,6 +72,7 @@ export function StewardLogin({
         if (result.mfaRequired && result.mfa) {
           setChallenge(result.mfa);
           setCode("");
+          setNotice("");
         } else if (result.csrf) await onSuccess(result.csrf);
         else
           throw new Error(
@@ -44,6 +82,7 @@ export function StewardLogin({
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
@@ -76,20 +115,22 @@ export function StewardLogin({
             <label>
               {challenge ? "Verification code" : "Email code"}
               <input
+                ref={codeInput}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 autoComplete="one-time-code"
                 inputMode="numeric"
-                pattern="[0-9]{6,12}"
+                pattern={challenge ? "[0-9]{6,12}" : "[0-9]{6}"}
                 required
-                maxLength={12}
+                maxLength={challenge ? 12 : 6}
+                aria-describedby="sign-in-code-help"
                 autoFocus
                 disabled={busy}
               />
             </label>
           )}
           {sent && (
-            <p role="status">
+            <p id="sign-in-code-help">
               {challenge?.type === "totp"
                 ? "Enter the code from your authenticator."
                 : challenge?.type === "sms"
@@ -105,6 +146,19 @@ export function StewardLogin({
                 : `Continue with ${providerLabel}`}
           </button>
         </form>
+        {notice && <p role="status">{notice}</p>}
+        {sent && !challenge && (
+          <button
+            type="button"
+            className="quiet"
+            disabled={busy || resendAt > Date.now()}
+            onClick={() => void resend()}
+          >
+            {resendAt > Date.now()
+              ? "Resend available after one minute"
+              : "Resend email code"}
+          </button>
+        )}
         {sent && (
           <button
             className="quiet"
@@ -114,6 +168,7 @@ export function StewardLogin({
               setCode("");
               setChallenge(null);
               setError("");
+              setNotice("");
             }}
           >
             Use another email

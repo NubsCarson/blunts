@@ -28,17 +28,30 @@ export async function request(
       data: response.data,
     };
   }
-  const response = await fetch(`/api${path}`, {
-    method: body === undefined ? "GET" : "POST",
-    credentials: "same-origin",
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  return {
-    ok: response.ok,
-    status: response.status,
-    data: await response.json(),
-  };
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await fetch(`/api${path}`, {
+      method: body === undefined ? "GET" : "POST",
+      credentials: "same-origin",
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    });
+    return {
+      ok: response.ok,
+      status: response.status,
+      data: await response.json(),
+    };
+  } catch (error) {
+    if (controller.signal.aborted)
+      throw new Error(
+        "The request timed out. For a money action, check History before retrying.",
+      );
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 async function cleanStatements() {
   try {
