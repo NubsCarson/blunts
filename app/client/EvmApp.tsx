@@ -28,7 +28,7 @@ import {
 } from "../shared/robinhood";
 import "./evm.css";
 import { chainReader as reader } from "./chain";
-import { prepareSwap } from "./prepare-swap";
+import { prepareSwap, InsufficientTokenBalanceError } from "./prepare-swap";
 import {
   ReviewStore,
   ReviewStorageError,
@@ -53,6 +53,7 @@ export function EvmApp() {
     [provider, setProvider] = useState<Provider | null>(null),
     [account, setAccount] = useState<Address | null>(null),
     [chain, setChain] = useState<number | null>(null),
+    [walletRevision, setWalletRevision] = useState(0),
     [market, setMarket] = useState<Market | null>(null),
     [balances, setBalances] = useState<{
       cash: bigint;
@@ -165,6 +166,7 @@ export function EvmApp() {
     if (!provider) return;
     const invalidate = () => {
       epoch.current++;
+      setWalletRevision((version) => version + 1);
       quoteEpoch.current++;
       balanceEpoch.current++;
       setBalances(null);
@@ -238,7 +240,7 @@ export function EvmApp() {
   }
   useEffect(() => {
     void refreshBalances();
-  }, [account, chain]);
+  }, [account, chain, walletRevision]);
   async function connect(choice: WalletChoice) {
     setBusy(true);
     setError("");
@@ -267,15 +269,21 @@ export function EvmApp() {
     if (!provider) return;
     setBusy(true);
     setError("");
+    const version = ++epoch.current;
+    quoteEpoch.current++;
+    setBalances(null);
+    setQuote(null);
+    setPrepared(null);
+    setStepFee(null);
     try {
       await provider.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: "0x1237" }],
       });
       const id = Number(await provider.request({ method: "eth_chainId" }));
-      setChain(id);
-      epoch.current++;
-      setBalances(null);
+      // A chainChanged event can finish its balance read before this request
+      // resolves. Its newer epoch owns the view; do not erase it afterward.
+      if (version === epoch.current) setChain(id);
     } catch {
       setError("Select Robinhood Chain (4663) in your wallet, then reconnect.");
     } finally {
@@ -347,7 +355,8 @@ export function EvmApp() {
       if (version === quoteEpoch.current && identity === epoch.current)
         setError(
           failure instanceof ReferenceGapError ||
-            failure instanceof ReviewStorageError
+            failure instanceof ReviewStorageError ||
+            failure instanceof InsufficientTokenBalanceError
             ? failure.message
             : "Wallet steps could not be verified or saved. Check your balance and preview again.",
         );

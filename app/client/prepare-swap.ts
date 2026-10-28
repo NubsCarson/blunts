@@ -11,6 +11,12 @@ import {
 } from "../shared/robinhood";
 import { approvalAbi, swapPlan } from "../shared/swap-plan";
 import { chainReader } from "./chain";
+export class InsufficientTokenBalanceError extends Error {
+  constructor(symbol: "USDG" | "QQQ") {
+    super(`Not enough ${symbol} in this wallet.`);
+    this.name = "InsufficientTokenBalanceError";
+  }
+}
 /** Fresh independent chain checks before showing wallet steps. No wallet writes.
  * The optional reader supports isolated-fork qualification, never URL input. */
 export async function prepareSwap(
@@ -65,7 +71,7 @@ export async function prepareSwap(
   )
     throw Error("Token or pool verification failed.");
   if (balance < plan.amountIn)
-    throw Error(`Not enough ${input.symbol} in this wallet.`);
+    throw new InsufficientTokenBalanceError(input.symbol);
   const simulated = await reader.simulateContract({
     address: dex.quoter,
     abi: quoteAbi,

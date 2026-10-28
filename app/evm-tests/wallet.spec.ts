@@ -41,7 +41,8 @@ test("wallet-first preview connects without signup, reads balances and never sen
     },
     { wallet },
   );
-  let nativeEth = "0xde0b6b3a7640000";
+  let nativeEth = "0xde0b6b3a7640000",
+    cashUnits = 100000000n;
   await context.route(
     "https://rpc.mainnet.chain.robinhood.com/",
     async (route) => {
@@ -131,7 +132,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
             [
               item.params?.[0]?.to?.toLowerCase() ===
               "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
-                ? 100000000n
+                ? cashUnits
                 : 1000000000000000000n,
             ],
           );
@@ -392,6 +393,23 @@ test("wallet-first preview connects without signup, reads balances and never sen
     await page.evaluate(() => (window as any).fixtureWalletRequests),
   ).toEqual(["eth_requestAccounts", "eth_chainId"]);
 
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  cashUnits = 0n;
+  nativeEth = "0xde0b6b3a7640000";
+  await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Review wallet steps", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "Not enough USDG in this wallet.",
+  );
+  await expect(
+    page.getByRole("region", { name: "Prepared wallet steps" }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() => (window as any).fixtureWalletRequests),
+  ).toEqual(["eth_requestAccounts", "eth_chainId"]);
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.evaluate(() => {
     (window as any).fixtureAccountsChanged([
