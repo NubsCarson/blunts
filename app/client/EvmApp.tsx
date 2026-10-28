@@ -54,6 +54,9 @@ export function EvmApp() {
     [account, setAccount] = useState<Address | null>(null),
     [chain, setChain] = useState<number | null>(null),
     [walletRevision, setWalletRevision] = useState(0),
+    [networkSetup, setNetworkSetup] = useState<"unknown" | "missing" | "added">(
+      "unknown",
+    ),
     [market, setMarket] = useState<Market | null>(null),
     [balances, setBalances] = useState<{
       cash: bigint;
@@ -75,6 +78,7 @@ export function EvmApp() {
     [error, setError] = useState(""),
     [marketError, setMarketError] = useState(""),
     [clock, setClock] = useState(Date.now());
+  const networkInFlight = useRef(false);
   const quoteEpoch = useRef(0);
   const balanceEpoch = useRef(0);
   const preparedSection = useRef<HTMLElement>(null);
@@ -265,8 +269,13 @@ export function EvmApp() {
       setBusy(false);
     }
   }
+  useEffect(() => {
+    setNetworkSetup("unknown");
+  }, [provider, account]);
   async function switchChain() {
-    if (!provider) return;
+    if (!provider || networkInFlight.current) return;
+    networkInFlight.current = true;
+    const adding = networkSetup === "missing";
     setBusy(true);
     setError("");
     const version = ++epoch.current;
@@ -276,17 +285,53 @@ export function EvmApp() {
     setPrepared(null);
     setStepFee(null);
     try {
-      await provider.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0x1237" }],
-      });
+      await provider.request(
+        adding
+          ? {
+              method: "wallet_addEthereumChain",
+              params: [
+                {
+                  chainId: "0x1237",
+                  chainName: robinhood.name,
+                  nativeCurrency: { ...robinhood.nativeCurrency },
+                  rpcUrls: [...robinhood.rpcUrls.default.http],
+                  blockExplorerUrls: [robinhood.blockExplorers!.default.url],
+                },
+              ],
+            }
+          : {
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: "0x1237" }],
+            },
+      );
       const id = Number(await provider.request({ method: "eth_chainId" }));
+      if (adding) setNetworkSetup("added");
       // A chainChanged event can finish its balance read before this request
       // resolves. Its newer epoch owns the view; do not erase it afterward.
       if (version === epoch.current) setChain(id);
-    } catch {
-      setError("Select Robinhood Chain (4663) in your wallet, then reconnect.");
+    } catch (failure) {
+      const code =
+        failure && typeof failure === "object" && "code" in failure
+          ? failure.code
+          : undefined;
+      if (!adding && code === 4902) {
+        setNetworkSetup("missing");
+        setError("");
+      } else if (code === 4001) {
+        setError(
+          adding
+            ? "Network addition was cancelled. You can try again."
+            : "Network switch was cancelled. You can try again.",
+        );
+      } else {
+        setError(
+          adding
+            ? "Your wallet could not add the network. Add Robinhood Chain using the details shown, then switch."
+            : "Select Robinhood Chain (4663) in your wallet, then reconnect.",
+        );
+      }
     } finally {
+      networkInFlight.current = false;
       setBusy(false);
     }
   }
@@ -524,13 +569,43 @@ export function EvmApp() {
                       : `Your wallet is on chain ${chain}.`}
                   </p>
                   {chain !== 4663 ? (
-                    <button
-                      className="primary"
-                      disabled={busy}
-                      onClick={switchChain}
-                    >
-                      Switch to Robinhood Chain
-                    </button>
+                    <>
+                      {networkSetup === "missing" && (
+                        <section
+                          className="evm-network-details"
+                          aria-label="Robinhood Chain network details"
+                        >
+                          <p>
+                            Your wallet needs Robinhood Chain. Review these
+                            details in its network prompt.
+                          </p>
+                          <dl>
+                            <dt>Network</dt>
+                            <dd>Robinhood Chain · 4663</dd>
+                            <dt>Gas token</dt>
+                            <dd>ETH · 18 decimals</dd>
+                            <dt>RPC</dt>
+                            <dd>
+                              <code>{robinhood.rpcUrls.default.http[0]}</code>
+                            </dd>
+                          </dl>
+                        </section>
+                      )}
+                      {networkSetup === "added" && (
+                        <p role="status">
+                          Network added. Switch to Robinhood Chain to continue.
+                        </p>
+                      )}
+                      <button
+                        className="primary"
+                        disabled={busy}
+                        onClick={switchChain}
+                      >
+                        {networkSetup === "missing"
+                          ? "Add Robinhood Chain"
+                          : "Switch to Robinhood Chain"}
+                      </button>
+                    </>
                   ) : (
                     <button
                       disabled={busy}

@@ -248,15 +248,18 @@
   color: var(--paper);
   font-size: 13px;
 }
+.evm-network-details dl,
 .evm-step-details dl {
   font-size: 12px;
   line-height: 1.6;
   margin: 12px 0;
 }
+.evm-network-details dt,
 .evm-step-details dt {
   color: var(--dim);
   margin-top: 12px;
 }
+.evm-network-details dd,
 .evm-step-details dd {
   margin: 3px 0 0;
 }
@@ -268,6 +271,7 @@
 .evm-step-details h3 {
   font-size: 14px;
 }
+.evm-network-details code,
 .evm-step-details code {
   font-size: 11px;
   overflow-wrap: anywhere;
