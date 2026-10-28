@@ -785,3 +785,50 @@ Full logs are private under `data/review-20261028/evm/replacement-recovery/`.
 The local preview remains enabled only under the owner's loopback-signing approval;
 no real-wallet cancellation, personal key use, mainnet submission or deployment
 was performed during this change.
+
+## Actual signed cancellation/replacement on the local fork
+
+The extended full-UI harness passed the new recovery code at source
+`1139ad82d61a9a31523995992fc13996aa14e5a8` against a fresh Anvil fork of
+Robinhood block **100069737**. All the fixed-loopback, fork-identity, generated
+in-memory key and read-only public-API constraints above remained in place.
+The fork retains chain ID 4663 without rewriting any chain-id response.
+
+After four successful UI-driven approval/buy/approval/sell receipts, the harness
+paused **local fork** automining and used the UI to request another finite
+approval. The test wallet signed it at nonce **4**, but it remained pending.
+The same disposable test key then signed a zero-value empty-data self-send at
+nonce 4, with higher fees. A local block mined the replacement; the cancellation
+had a successful receipt and the displaced original had no receipt. No personal
+wallet or public-chain mining/mempool was touched.
+
+The actual app Activity UI tracked that cancellation hash, verified the canonical
+fork receipt and recovered one `replaced` record preserving the original hash,
+call and nonce with nested cancellation proof. A real browser reload/reconnect
+retained five journal records: the four completed cycle steps and the displaced
+approval. No new UI request followed recovery. QQQ remained zero and USDG was
+unchanged by the cancelled approval. Anvil logs recorded **six raw signed
+submissions**: four mined cycle transactions, the displaced pending approval,
+and the one mined cancellation. There were five successful receipts in total,
+not six successful transfers or orders.
+
+Private receipt and screenshot:
+`data/review-20261028/evm/ui-fork-1793190131905/receipt.json` and
+`cancellation-included-local-fork.png`. The receipt distinguishes the five UI
+requests from the one cancellation initiated by the test harness. It records
+`originalReceiptMissing=true`, `originalPreserved=true`, `reloadVerified=true`
+and `newUiRequestAfterRecovery=false`. The fork/QA-server logs are preserved under
+`data/review-20261028/evm/replacement-recovery/`. All are local test evidence,
+not a mainnet cancellation or a personal-wallet signature receipt.
+
+The QA app server (8753) and Anvil node (8752) were stopped afterward; the owner's
+approved local preview on 8745 stayed running. Ephemeral test keys were not saved.
+The harness restores local automining in its cleanup path if interrupted. Final
+TypeScript and formatting checks passed. A callback-mutated array count needed an
+explicit getter to avoid TypeScript's stale literal-length narrowing; no app
+transaction, security, timeout or rate-limit policy changed for this qualification.
+
+This supersedes the earlier fixture-only limit specifically for **local-fork
+cancellation recovery**. Installed-wallet/hardware/mobile acceptance, real eligible
+holder/mainnet receipts, Ethereum finality, fee/business approval and public
+release approval remain separate unproven gates.

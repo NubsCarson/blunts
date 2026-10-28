@@ -384,3 +384,12 @@ sent. Verified replacement allows only a fresh quote/review. Unknown/noncanonica
 outcomes stay blocked; reorgs re-block. A pre-write size guard prevents newly
 saved activity from exceeding its own readable limit. This checkpoint has unit
 and browser-fixture proof, not an actual fork/mainnet cancellation receipt yet.
+
+Actual fork cancellation recovery is now proven in the full UI harness, not just
+fixtures: source 1139ad8, fork block 100069737, pending approval nonce 4 replaced
+by a signed zero-value self-send at the same nonce. Cancellation receipt succeeded;
+original receipt absent; UI preserved both hashes in one replaced record and
+recovered five journal rows after reload, with no new automatic request.
+Receipt: ui-fork-1793190131905/receipt.json. Six raw signatures include the one
+pending displaced request; only five receipts succeeded. No personal keys or
+public submission. QA ports 8752/8753 stopped; actual local preview 8745 preserved.

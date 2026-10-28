@@ -85,10 +85,12 @@ const balance = async (token: Address) =>
   });
 const before = await balance(cash.address),
   sends: { hash: Hex; transaction: unknown }[] = [];
+const uiRequestCount = () => sends.length;
 const root = `data/review-20261028/evm/ui-fork-${Date.now()}`;
 await mkdir(root, { recursive: true, mode: 0o700 });
 const browser = await chromium.launch({ headless: true });
 let readCalls = 0;
+let miningPaused = false;
 let observedPage: Page | undefined;
 try {
   const context = await browser.newContext({
@@ -214,7 +216,7 @@ try {
       .getByRole("button", { name: "Review wallet steps", exact: true })
       .click();
     const region = page.getByRole("region", { name: "Wallet signing" }),
-      count = sends.length;
+      count = uiRequestCount();
     await region.getByRole("checkbox").check();
     await region
       .getByRole("button", {
@@ -225,7 +227,7 @@ try {
     await expect(
       region.getByRole("button", { name: "Check wallet receipt", exact: true }),
     ).toBeVisible();
-    if (sends.length !== count + 1)
+    if (uiRequestCount() !== count + 1)
       throw Error("Unexpected automatic fixture transaction.");
     await region
       .getByRole("button", { name: "Check wallet receipt", exact: true })
@@ -243,7 +245,7 @@ try {
     await expect(
       region.getByRole("button", { name: "Check wallet receipt", exact: true }),
     ).toBeVisible();
-    if (sends.length !== count + 2)
+    if (uiRequestCount() !== count + 2)
       throw Error("Unexpected fixture request count.");
     await region
       .getByRole("button", { name: "Check wallet receipt", exact: true })
@@ -271,14 +273,14 @@ try {
   await page.locator(".evm-connect button").click();
   await page.getByText("Activity on this browser", { exact: true }).click();
   await expect(page.locator(".evm-activity-list li")).toHaveCount(4);
-  const journal = await page.evaluate(
+  let journal = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key) ?? "[]"),
     `blunts:swap:4663:${owner.toLowerCase()}`,
   );
   if (
     journal.length !== 4 ||
     journal.some((r: any) => r.state !== "included") ||
-    sends.length !== 4
+    uiRequestCount() !== 4
   )
     throw Error("Reloaded browser journal did not match executed fork steps.");
   const receipts = await Promise.all(
@@ -286,6 +288,98 @@ try {
   );
   if (receipts.some((r) => r.status !== "success"))
     throw Error("Fork transaction reverted.");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await assertFork();
+  await rpc("evm_setAutomine", [false]);
+  miningPaused = true;
+  await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByLabel("USDG to spend", { exact: true }).fill("1");
+  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Review wallet steps", exact: true })
+    .click();
+  const signing = page.getByRole("region", { name: "Wallet signing" });
+  await signing.getByRole("checkbox").check();
+  await signing
+    .getByRole("button", {
+      name: "Approve exact amount in wallet",
+      exact: true,
+    })
+    .click();
+  await expect(
+    signing.getByText("Request sent. Check its receipt before continuing.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  if (uiRequestCount() !== 5)
+    throw Error("Unexpected extra UI request before cancellation.");
+  const pending = sends[4];
+  const pendingTx = await client.getTransaction({ hash: pending.hash });
+  await assertFork();
+  const cancellationHash = await testWallet.sendTransaction({
+    to: owner,
+    value: 0n,
+    data: "0x",
+    nonce: pendingTx.nonce,
+    gas: 21000n,
+    maxFeePerGas:
+      (pendingTx.maxFeePerGas ?? pendingTx.gasPrice ?? 20000000n) * 2n + 1n,
+    maxPriorityFeePerGas: (pendingTx.maxPriorityFeePerGas ?? 1n) * 2n + 1n,
+  });
+  await rpc("evm_mine");
+  await rpc("evm_setAutomine", [true]);
+  miningPaused = false;
+  const cancellationReceipt = await client.waitForTransactionReceipt({
+    hash: cancellationHash,
+  });
+  if (
+    cancellationReceipt.status !== "success" ||
+    (await rpc("eth_getTransactionReceipt", [pending.hash])) !== null
+  )
+    throw Error("Original request was not displaced by the fork cancellation.");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.locator(".evm-connect button").click();
+  await page.getByText("Activity on this browser", { exact: true }).click();
+  await page
+    .getByLabel("Transaction hash", { exact: true })
+    .fill(cancellationHash);
+  await page
+    .getByRole("button", { name: "Track transaction", exact: true })
+    .click();
+  await expect(
+    page.getByText("Wallet cancellation included", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByText("Wallet cancellation included", { exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: `${root}/cancellation-included-local-fork.png`,
+  });
+  await page.reload();
+  await connect();
+  await page.locator(".evm-connect button").click();
+  await page.getByText("Activity on this browser", { exact: true }).click();
+  await expect(
+    page.getByText("Wallet cancellation included", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".evm-activity-list li")).toHaveCount(5);
+  journal = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key) ?? "[]"),
+    `blunts:swap:4663:${owner.toLowerCase()}`,
+  );
+  const recovered = journal.find((r: any) => r.hash === pending.hash);
+  if (
+    uiRequestCount() !== 5 ||
+    recovered?.state !== "replaced" ||
+    recovered?.replacement?.hash !== cancellationHash ||
+    recovered?.replacement?.kind !== "cancel" ||
+    (await balance(cash.address)) !== after ||
+    (await balance(stock.address)) !== 0n
+  )
+    throw Error(
+      "Cancellation recovery did not preserve the original or changed token balances.",
+    );
+
   await writeFile(
     `${root}/receipt.json`,
     JSON.stringify(
@@ -319,6 +413,20 @@ try {
           blockHash: r.blockHash,
           blockNumber: String(r.blockNumber),
         })),
+        replacementCancellation: {
+          originalHash: pending.hash,
+          cancellationHash,
+          nonce: pendingTx.nonce,
+          status: cancellationReceipt.status,
+          blockHash: cancellationReceipt.blockHash,
+          blockNumber: String(cancellationReceipt.blockNumber),
+          originalReceiptMissing: true,
+          originalPreserved: true,
+          newUiRequestAfterRecovery: false,
+          reloadVerified: true,
+        },
+        signedUiRequests: uiRequestCount(),
+        signedHarnessCancellationRequests: 1,
         reloadedJournal: journal,
       },
       null,
@@ -330,7 +438,7 @@ try {
     JSON.stringify({
       passed: true,
       scope: "isolated fork only",
-      walletRequests: sends.length,
+      walletRequests: uiRequestCount(),
       journalRecords: journal.length,
       stockAfter: String(stockAfter),
       receipt: `${root}/receipt.json`,
@@ -345,7 +453,7 @@ try {
       passed: false,
       scope: "isolated fork UI qualification only",
       errorName: error instanceof Error ? error.name : "Unknown",
-      walletRequests: sends.length,
+      walletRequests: uiRequestCount(),
       mainnetWrites: 0,
     }),
     { mode: 0o600 },
@@ -355,5 +463,15 @@ try {
   );
   process.exitCode = 2;
 } finally {
+  if (miningPaused) {
+    try {
+      await rpc("evm_setAutomine", [true]);
+    } catch {
+      process.exitCode = 2;
+      console.error(
+        "Fork mining cleanup failed; stop only the task-owned local node.",
+      );
+    }
+  }
   await browser.close();
 }
