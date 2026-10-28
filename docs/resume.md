@@ -280,3 +280,10 @@ wallet route and accessible from Menu. The old simulator lessons remain availabl
 only in the legacy UI. The six browser cases cover the wallet lifecycle and all
 five lesson steps on three engines. No keys, transaction approvals, real funds,
 public hosting or social publishing were used during crash recovery.
+
+Latest recovery hardening: activity updates use real cross-tab Web Locks per
+wallet/chain, a same-tab in-flight guard and storage-event synchronization.
+Receipt observations reject stale overwrites. This does not enable signing;
+normal browser tabs only track/read existing compatible transactions. Unsupported
+Web-Lock environments may read/export but cannot update activity. See the latest
+section of `docs/evm-robinhood.md` for scope and proof.

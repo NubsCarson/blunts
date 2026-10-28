@@ -7,6 +7,7 @@ import {
 } from "../shared/swap-journal";
 import { trackWalletTransaction } from "./transaction-activity";
 import { chainReader } from "./chain";
+import { withActivityLock } from "./activity-lock";
 import { robinhood } from "../shared/robinhood";
 const labels: Record<SwapAttempt["state"], string> = {
   awaiting_wallet: "Wallet response missing",
@@ -25,6 +26,7 @@ export function TransactionActivity({ owner }: { owner: Address }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const epoch = useRef(0);
+  const inFlight = useRef(false);
   const disclosure = useRef<HTMLDetailsElement>(null);
   const latestRow = useRef<HTMLLIElement>(null);
   useEffect(() => {
@@ -37,24 +39,38 @@ export function TransactionActivity({ owner }: { owner: Address }) {
       });
   }, [records]);
   useEffect(() => {
-    try {
-      setRecords(new SwapJournal(window.localStorage, owner, 4663).read());
-    } catch {
-      setError(
-        "Activity could not be read. Existing browser records were preserved.",
-      );
-    }
+    const key = `blunts:swap:4663:${owner.toLowerCase()}`;
+    const reload = () => {
+      try {
+        setRecords(new SwapJournal(window.localStorage, owner, 4663).read());
+      } catch {
+        setError(
+          "Activity could not be read. Existing browser records were preserved.",
+        );
+      }
+    };
+    reload();
+    const changed = (event: StorageEvent) => {
+      if (event.key === key || event.key === null) reload();
+    };
+    window.addEventListener("storage", changed);
     return () => {
       epoch.current++;
+      window.removeEventListener("storage", changed);
     };
   }, [owner]);
   async function track() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     const version = epoch.current;
     setBusy(true);
     setError("");
     try {
       const journal = new SwapJournal(window.localStorage, owner, 4663);
-      await trackWalletTransaction(hash.trim(), owner, journal);
+      await withActivityLock(journal.key, async () => {
+        if (version !== epoch.current) return;
+        await trackWalletTransaction(hash.trim(), owner, journal);
+      });
       if (version === epoch.current) {
         setRecords(journal.read());
         setHash("");
@@ -65,16 +81,22 @@ export function TransactionActivity({ owner }: { owner: Address }) {
           "This hash could not be verified for your wallet or saved in this browser. Check the hash and try again. No new transaction was sent.",
         );
     } finally {
+      inFlight.current = false;
       if (version === epoch.current) setBusy(false);
     }
   }
   async function refresh(record: SwapAttempt) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     const version = epoch.current;
     setBusy(true);
     setError("");
     try {
       const journal = new SwapJournal(window.localStorage, owner, 4663);
-      await reconcileSwapAttempt(record, chainReader, journal);
+      await withActivityLock(journal.key, async () => {
+        if (version !== epoch.current) return;
+        await reconcileSwapAttempt(record, chainReader, journal);
+      });
       if (version === epoch.current) setRecords(journal.read());
     } catch {
       if (version === epoch.current)
@@ -82,6 +104,7 @@ export function TransactionActivity({ owner }: { owner: Address }) {
           "Receipt check unavailable. Existing transaction records were preserved.",
         );
     } finally {
+      inFlight.current = false;
       if (version === epoch.current) setBusy(false);
     }
   }

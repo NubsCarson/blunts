@@ -106,6 +106,20 @@ export class SwapJournal {
     }
     this.storage.setItem(this.key, JSON.stringify(records));
   }
+  /** Caller must hold the wallet's cross-tab lock. A slow observation may
+   * never overwrite a record changed since its read began. */
+  saveObservation(record: SwapAttempt, expected: SwapAttempt): SwapAttempt {
+    const current = this.read().find(
+      (r) => r.planId === expected.planId && r.step === expected.step,
+    );
+    if (!current) throw Error("Existing activity record is missing.");
+    if (
+      JSON.stringify(current) !== JSON.stringify(attemptSchema.parse(expected))
+    )
+      return current;
+    this.save(record);
+    return record;
+  }
 }
 export type WalletRpc = {
   request(args: { method: string; params?: unknown[] }): Promise<any>;
@@ -284,6 +298,11 @@ export async function reconcileSwapAttempt(
     attempt.owner.toLowerCase() !== journal.owner.toLowerCase()
   )
     throw Error("Wrong recovery chain or wallet.");
+  const current = journal
+    .read()
+    .find((r) => r.planId === attempt.planId && r.step === attempt.step);
+  if (!current) throw Error("Activity record is missing.");
+  attempt = current;
   if (!attempt.hash) return attempt; // No hash: uncertainty cannot authorize resubmission.
   let tx, receipt;
   try {
@@ -301,8 +320,7 @@ export async function reconcileSwapAttempt(
         });
         if (block.hash !== attempt.blockHash) {
           const next = { ...attempt, state: "reorged" as const };
-          journal.save(next);
-          return next;
+          return journal.saveObservation(next, attempt);
         }
       } catch {
         /* Missing history is not proof of a reorg. */
@@ -313,8 +331,7 @@ export async function reconcileSwapAttempt(
       checkedAt: Date.now(),
       observation: "unavailable" as const,
     };
-    journal.save(unavailable);
-    return unavailable;
+    return journal.saveObservation(unavailable, attempt);
   }
   if (!["success", "reverted"].includes(receipt.status))
     throw Error("Receipt status is not recognized.");
@@ -351,6 +368,5 @@ export async function reconcileSwapAttempt(
   next.observedAt = Date.now();
   next.checkedAt = next.observedAt;
   next.observation = "verified";
-  journal.save(next);
-  return next;
+  return journal.saveObservation(next, attempt);
 }

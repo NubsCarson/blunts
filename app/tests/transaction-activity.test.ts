@@ -207,3 +207,36 @@ test("fee readiness uses exact gas/wei with a 20% buffer and never estimates uns
   await assert.rejects(estimateFirstStepFee(plan, reader));
   assert.equal(estimates, 2);
 });
+
+test("late receipt and outage observations cannot overwrite a newer journal revision", async () => {
+  const f = fixture();
+  const initial = await trackWalletTransaction(
+    hash,
+    owner,
+    f.journal,
+    f.reader,
+  );
+  let release!: () => void;
+  let entered!: () => void;
+  const started = new Promise<void>((r) => (entered = r));
+  const waiting = new Promise<void>((r) => (release = r));
+  const original = f.reader.getTransactionReceipt;
+  f.reader.getTransactionReceipt = async (args) => {
+    entered();
+    await waiting;
+    return original(args);
+  };
+  const slow = reconcileSwapAttempt(initial, f.reader, f.journal);
+  await started;
+  const newer = {
+    ...initial,
+    state: "reorged" as const,
+    checkedAt: Date.now() + 1,
+  };
+  f.journal.save(newer);
+  release();
+  assert.equal((await slow).state, "reorged");
+  assert.deepEqual(f.journal.read()[0], newer);
+  const stale = { ...initial, observation: "unavailable" as const };
+  assert.equal(f.journal.saveObservation(stale, initial).state, "reorged");
+});

@@ -317,3 +317,36 @@ legacy demo retains its own original lessons and fee explanation. Wallet lessons
 do not invent returns, a new fee, completed signing, or a bank cash-out feature.
 All five steps and return navigation passed across Chromium, mobile Chromium
 and WebKit alongside the wallet/activity/reload checks: **6 browser cases passed**.
+
+## Cross-tab activity coordination
+
+Activity writes now acquire an exclusive same-origin Web Lock named for the
+exact wallet/chain journal. A second tab waits; duplicate actions within one
+component are also synchronously suppressed. Browsers lacking Web Locks can
+still read/export existing records, but activity mutations fail closed instead
+of silently using an unsafe fallback. This does not introduce mainnet signing.
+
+Other tabs listen for storage changes and reload only their current wallet's
+records. Each receipt observation compares the journal record it began with to
+the latest stored record before saving. A late success or outage response returns
+the newer record instead of overwriting it. Missing activity records fail closed.
+This protects normal Blunts tabs sharing one origin/storage partition; it is not
+cross-device synchronization or protection from manual storage modification.
+The fork-only executor still requires a caller-provided exclusive lock, and no
+public browser writer was added.
+
+The browser scenario now opens a second same-origin tab with a disposable fixture
+wallet, holds the journal's real Web Lock, verifies the first tab is queued and
+has written no record, releases it, and observes the resulting inclusion record
+in the sibling through the storage event. Unit coverage separately races a delayed
+receipt response against a newer journal record and verifies no stale overwrite.
+
+Cross-tab validation: the full backend run passed **56 tests with two optional
+integration skips** (PostgreSQL and non-running local Steward), and the additional
+unsupported-Web-Lock guard test passed separately. Build/typecheck, formatter and
+whitespace checks passed. Final serial browser run passed **6/6 cases** across
+Chromium, mobile Chromium and WebKit, including an actual queued cross-tab Web Lock
+and sibling storage-event update. One earlier walkthrough bootstrap timed out
+while an overlapping rebuild replaced hashed assets; its failure context was
+preserved and browser acceptance rerun against stable build output. No app fix or
+rate-limit relaxation was used to conceal that verification error.

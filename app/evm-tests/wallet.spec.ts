@@ -16,8 +16,9 @@ const trackedInput = encodeFunctionData({
 const wallet = "0x1111111111111111111111111111111111111111";
 test("wallet-first preview connects without signup, reads balances and never sends money", async ({
   page,
+  context,
 }, info) => {
-  await page.addInitScript(
+  await context.addInitScript(
     ({ wallet }) => {
       const listeners: Record<string, Function> = {};
       (window as any).fixtureWalletRequests = [];
@@ -37,7 +38,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
     { wallet },
   );
   let nativeEth = "0xde0b6b3a7640000";
-  await page.route(
+  await context.route(
     "https://rpc.mainnet.chain.robinhood.com/",
     async (route) => {
       const body = route.request().postDataJSON();
@@ -137,7 +138,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
       });
     },
   );
-  await page.route("**/api/onchain/market", (route) =>
+  await context.route("**/api/onchain/market", (route) =>
     route.fulfill({
       json: {
         chainId: 4663,
@@ -154,7 +155,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
       },
     }),
   );
-  await page.route("**/api/onchain/quote?*", (route) =>
+  await context.route("**/api/onchain/quote?*", (route) =>
     route.fulfill({
       json: {
         side: new URL(route.request().url()).searchParams.get("side"),
@@ -228,10 +229,52 @@ test("wallet-first preview connects without signup, reads balances and never sen
     page.getByRole("region", { name: "Saved review" }),
   ).toBeVisible();
   await page.getByText("Activity on this browser", { exact: true }).click();
+  const sibling = await context.newPage();
+  await sibling.goto("/");
+  await sibling
+    .getByRole("button", { name: "Connect wallet", exact: true })
+    .click();
+  await sibling
+    .getByRole("button", { name: "Browser wallet", exact: true })
+    .click();
+  await sibling.locator(".evm-connect button").click();
+  await sibling.getByText("Activity on this browser", { exact: true }).click();
+  const lockName = `blunts:activity:blunts:swap:4663:${wallet.toLowerCase()}`;
+  await sibling.evaluate(async (name) => {
+    await new Promise<void>((ready) => {
+      void navigator.locks.request(name, { mode: "exclusive" }, async () => {
+        await new Promise<void>((release) => {
+          (window as any).releaseFixtureLock = release;
+          ready();
+        });
+      });
+    });
+  }, lockName);
   await page.getByLabel("Transaction hash", { exact: true }).fill(trackedHash);
   await page
     .getByRole("button", { name: "Track transaction", exact: true })
     .click();
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        async (name) =>
+          (await navigator.locks.query()).pending?.some(
+            (lock) => lock.name === name,
+          ) ?? false,
+        lockName,
+      ),
+    )
+    .toBe(true);
+  await expect(page.locator(".evm-activity-list li")).toHaveCount(0);
+  await sibling.evaluate(() => (window as any).releaseFixtureLock());
+  await expect(
+    sibling.getByText("Included on Robinhood Chain", { exact: true }),
+  ).toBeVisible();
+  await expect(sibling.locator(".evm-activity-list li")).toHaveCount(1);
+  expect(
+    await sibling.evaluate(() => (window as any).fixtureWalletRequests),
+  ).toEqual(["eth_requestAccounts", "eth_chainId"]);
+  await sibling.close();
   await expect(
     page.getByText("Included on Robinhood Chain", { exact: true }),
   ).toBeVisible();
