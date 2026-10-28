@@ -17,7 +17,12 @@ npm start
 
 Connect an injected EVM wallet to read its QQQ/USDG balances. Fill previews a
 USDG → QQQ swap; Spark previews QQQ → USDG. Public issuer and chain data supply
-quotes and valuations. No simulated $500 balance is added to a connected wallet.
+quotes and valuations. Fill and Spark each collect **1% of the received tokens**
+(QQQ on Fill, USDG on Spark) to the owner's approved public wallet
+`0x4a27c325De7629c6bBD187E1e456B56c82E73073`. The UI shows output and minimum
+**after** this fee; pool fees and ETH gas remain separate. The fee and swap are
+atomic: a reverted swap charges no Blunts fee, although gas can still be charged.
+No simulated $500 balance is added to a connected wallet.
 Blunts never asks for a seed phrase or private key. Connection requests only the
 public address. Wallet approval/signing requests occur only after a separate,
 explicit step selection and eligibility acknowledgement.

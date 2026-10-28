@@ -1,3 +1,34 @@
+# Current fee checkpoint — October 28
+
+The owner approved 1% on Fill and Spark to
+`0x4a27c325De7629c6bBD187E1e456B56c82E73073`. Local commit `ae8d602`
+implements an atomic SwapRouter02 batch: swap output to the router, then
+`sweepTokenWithFee` to the holder with the fixed 100 bps fee recipient. Fill
+charges QQQ output; Spark charges USDG output. This intentionally uses an output
+fee instead of the preserved provider version's input conversion fee. User-facing
+output/minimum are net of fee, with token-unit rounding down. Pool fees and gas
+are separate. Failed swaps revert the app fee too. No new custom contract, API
+key, personal signing, funding or public deployment was required.
+
+Fresh committed-source full-UI signed-fork receipt:
+`data/review-20261028/evm/ui-fork-1793191879094/receipt.json`. It verifies both
+fee transfers and recipient balance deltas, a mined failing swap with no token
+movement or app fee, plus signed cancellation recovery. Public-chain writes: zero.
+Tests: 78 passed, two optional service skips; browser 24 passed; format passed.
+Refreshed Android debug and unsigned iOS Simulator builds passed; nine JS bundles
+were matched to both packaged apps. Artifacts and checksum receipt are in
+`data/review-20261028/evm/fee-native-checkpoint/`. Development release refusal
+passed as expected. No installed-wallet/device acceptance is implied.
+Activity additionally reports canonical RPC safe/finalized tags, without claiming
+independent Ethereum settlement proof.
+
+The preview is localhost:8745. Local signing stays holder-controlled; hosted and
+native origins remain disabled. Remaining acceptance is installed-wallet/device
+behavior and a genuinely eligible holder's mainnet execution. Those are not
+proven by fixture or fork evidence. Publishing remains on hold until approval.
+
+---
+
 # Latest owner approval — local signing, October 28
 
 The owner explicitly approved signing and reiterated that everything must stay

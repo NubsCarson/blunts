@@ -2,7 +2,9 @@
 
 **Current owner-approved scope:** local HTTP loopback web signing is enabled as
 recorded in the latest section. Hosted/native origins remain disabled and shipping
-still requires later approval. Earlier disabled-signing/bundle claims below are
+still requires later approval. Both Fill and Spark now collect the owner-approved
+1% output fee; see the final fee qualification section for the receipt.
+Earlier disabled-signing/bundle claims below are
 historical checkpoints, superseded only for the approved local web origin.
 
 
@@ -11,7 +13,7 @@ EVM wallet and Robinhood Chain stock tokens. The previous implementation is
 preserved at `e89c958` on `codex/local-review-20261027`. Existing data and secrets
 are untouched. New work stays local on `codex/evm-robinhood-local`.
 
-## Current experience
+## Initial wallet-first checkpoint — before local signing approval
 
 The same original tray, brown/gold palette, fonts and Fill/Spark controls now
 open a wallet-first preview. There is no email signup, Cloud session or brokerage
@@ -853,3 +855,81 @@ It sent zero transactions and is not an owner trade acceptance receipt.
 Owner subsequently approved 1% Fill and Spark fees to public wallet
 `0x4a27c325De7629c6bBD187E1e456B56c82E73073`. Implementation and signed-fork
 fee verification remain the next work; this checkpoint still charges no app fee.
+
+
+## Approved 1% fee, atomic router qualification — October 28
+
+Owner approved the fee and public receiving wallet
+`0x4a27c325De7629c6bBD187E1e456B56c82E73073`. Commit `ae8d602` fixes both
+100 bps and this recipient in source with no runtime overrides. The route uses
+the existing SwapRouter02's deadline-protected `multicall`: `exactInputSingle`
+sends gross output to the router, and `sweepTokenWithFee` sends the fee to that
+address and the remainder to the connected holder. The minimum in the router is
+gross; the displayed minimum is its net after the same floor-rounded fee.
+Both operations revert together. Approvals still authorize only the exact input.
+
+Fill collects QQQ and Spark collects USDG. This differs in denomination from the
+preserved provider architecture's input conversion fee; both retain the approved
+1% rate. The UI and walkthrough disclose it, including full receiving address in
+exact transaction details, estimated fee, net output/minimum, separate pool cost
+and gas. API `amountOut` and `minimumOut` remain gross quoter values; shared
+`quoteAfterFee` derives net amounts. Reference shortfall remains a pool-output
+comparison before the app fee, labelled accordingly. The stateless router sweep
+uses its full output-token balance, including any incidental dust; the fee applies
+to that swept balance. No output remains intentionally stored in the router.
+
+Official source used: [SwapRouter02](https://github.com/Uniswap/swap-router-contracts/blob/main/contracts/SwapRouter02.sol),
+[V3SwapRouter](https://github.com/Uniswap/swap-router-contracts/blob/main/contracts/V3SwapRouter.sol)
+and [PeripheryPaymentsWithFee](https://github.com/Uniswap/v3-periphery/blob/main/contracts/base/PeripheryPaymentsWithFee.sol).
+Actual contract behavior was qualified on the isolated fork, not inferred from
+these source links alone. Old fee-free own-wallet batches remain trackable
+read-only; new fee batches reject changed token, recipient, fee bps, minimum,
+fee recipient or arbitrary additional calls. Existing unknown requests still
+require exact calldata matching and cannot silently acquire the new fee.
+
+Validation: `npm run check` 78 passed/two optional service skips; browser 24 passed
+across desktop Chromium, mobile Chromium and WebKit; formatting passed. Added
+coverage includes rounding at small units, minimum rounding in both token decimal
+scales, exact atomic destinations, tampered fees and old activity compatibility.
+
+Fresh committed-source receipt:
+`data/review-20261028/evm/ui-fork-1793191879094/receipt.json`, source `ae8d602`,
+fork block 100086216 (the receipt's forkSource is authoritative). The app completed
+four signed cycle requests. The receipt verifies exact 1% transfers to the public
+recipient and actual QQQ/USDG recipient balance deltas. A separate harness signed
+a finite 1-USDG approval followed by an impossible-minimum swap. The swap mined
+reverted, preserving holder and recipient token balances. ETH gas still applies.
+The UI subsequently requested a clear-allowance step; a same-nonce signed
+cancellation displaced it, and reload preserved the original plus replacement
+proof without automatic replay. There were five UI signing requests and three
+additional harness requests (failure approval, failing swap, cancellation): eight
+signed submissions total, six successful receipts, one reverted receipt and one
+displaced pending request. This was isolated fork state only, with a disposable
+in-memory key, zero personal keys and zero public-chain writes.
+
+An earlier attempt timed out because the harness expected approval after its own
+nonzero allowance test; the app correctly required clearing that allowance first.
+The harness was corrected to use the displayed clear-allowance action. Prior
+attempts are preserved separately and are not the final acceptance receipt.
+
+Shipping/publication remain unapproved. Physical installed-wallet and eligible
+holder mainnet acceptance remain unproven, independent of these local results.
+
+
+### Refreshed local native artifacts for the fee change
+
+Android debug and unsigned iOS Simulator builds both passed from `ae8d602`.
+Native sync uses development API origin `http://localhost:8745`, with no public
+wallet handoff origin. All nine native JavaScript bundles were SHA-256 matched
+against both the APK and Simulator app contents. New private copies and checksums:
+`data/review-20261028/evm/fee-native-checkpoint/receipt.json`,
+`blunts-wallet-fee-debug.apk`, `ios-wallet-fee-simulator-unsigned.tgz`.
+The previous native checkpoint remains preserved. The release check correctly
+refused this development/loopback build. No release identity or provisioning
+profile was used, and no device install or native signing acceptance is claimed.
+
+Temporary QA server 8753 and Anvil 8752 were stopped. The loopback-only preview
+on 8745 was restarted and its health returned `transactionsEnabled: true`.
+That enables individual holder-controlled web requests locally, with no automatic
+trade and no hosted/native enablement. Documentation changes follow the tested
+source commit; they do not change the app or artifact hashes.
