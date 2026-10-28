@@ -1,5 +1,7 @@
 # Blunts
 
+Saved local stopping point and restart instructions: [resume notes](docs/resume.md).
+
 One React app for the web, iOS and Android. Wallet setup appears over the 3D tray;
 backup, recovery and sign-out live under **Menu → Wallet**. No subscription. The simulated
 investment flow charges an uncapped 1% on each completed Fill/Spark conversion.
@@ -7,8 +9,9 @@ investment flow charges an uncapped 1% on each completed Fill/Spark conversion.
 **Current release: simulated money only.** Eliza Cloud is the default first-party
 login gateway; direct Steward deployments are also supported. Identity, personal
 wallet provisioning and server-held sessions are connected. Funding, investments,
-sales and payouts still use the deterministic simulator. No transaction signer,
-MoonPay checkout, Dinari account or investment asset is connected. `MONEY_MODE=live` deliberately refuses
+sales and payouts still use the deterministic simulator. A separate opt-in local
+Dinari/MoonPay sandbox workbench is implemented; no production signer, provider
+account or investment asset is connected to the tray. `MONEY_MODE=live` deliberately refuses
 to start. Adding credentials will not enable live money: the integrations below
 still require implementation and acceptance. This runbook distinguishes that
 engineering work from account setup and publishing work.
