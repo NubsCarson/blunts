@@ -67,3 +67,8 @@ No public host was created. A future native build can explicitly set the public,
 non-secret `VITE_PUBLIC_APP_ORIGIN`; `MOBILE_API_ORIGIN` still configures native
 API transport during `mobile:sync`. Hosting, native builds and physical-device
 wallet acceptance remain separate approval/verification steps.
+
+Local wallet-first native development builds now pass for Android debug and
+unsigned iOS Simulator. The [native build receipt and commands](docs/evm-robinhood.md#native-wallet-first-development-builds)
+record exact source, endpoints and checksums. They use localhost, fail the release
+check intentionally, and have not been installed or wallet-tested on a phone.

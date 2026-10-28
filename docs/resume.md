@@ -322,3 +322,12 @@ show a local-preview explanation. Nothing was deployed or opened in a personal
 wallet. Wallet market/quote reads now use the existing platform HTTP transport,
 so native sources address their configured backend rather than local assets.
 Physical mobile connection/signing and fresh native builds remain unverified.
+
+Fresh native build receipt now exists for wallet-first source `7c564f8`:
+Android debug and unsigned arm64/x86_64 iOS Simulator builds passed, with the
+explicit localhost development endpoint. Private logs/artifacts/hashes are under
+`data/review-20261028/evm/native-checkpoint/`. Existing bundled assets were archived
+before sync. Both SDK/JDK/Xcode selections were command-scoped. The release guard
+correctly refuses these development assets. No physical-device installation,
+wallet connection/signing, release signing, deployment or publishing occurred.
+Compile success does not prove native runtime transport or mobile wallet acceptance.

@@ -517,3 +517,52 @@ wallet, MetaMask launch or third-party navigation occurred. Unit checks cover
 private, malformed and secret-bearing origins. Build/typecheck, formatting,
 whitespace and UI detector passed. The writer remains absent from the UI bundle.
 The physical-mobile and native-build gates are still unproven.
+
+## Native wallet-first development builds
+
+The current wallet-first source at `7c564f8b8b0aef2e1e4deae5f64aa69273daeeca`
+was synced and compiled locally after the transport/mobile-entry changes. Prior
+bundled assets were archived before sync. No native tracked file changed and no
+owner device was installed, reset, signed into or updated.
+
+- `MOBILE_API_ORIGIN=http://localhost:8745 VITE_PUBLIC_APP_ORIGIN= npm run mobile:sync -- --development`
+  completed. The compiled endpoint is explicitly development-only and has no
+  configured public wallet-handoff origin.
+- Android debug `assembleDebug` succeeded with JDK 21 and Android SDK 36 installed
+  locally. The first attempt failed because inherited `ANDROID_SDK_ROOT` and
+  `ANDROID_HOME` pointed to different installations; the retry set both to the
+  same existing SDK per command. No global environment or SDK setting was changed.
+- Xcode 27.1 built the generic iOS Simulator target with
+  `CODE_SIGNING_ALLOWED=NO`. The resulting app includes arm64 and x86_64 simulator
+  executables. No signing identity or provisioning profile was used.
+- Packaged Android JavaScript bytes and index match `dist-native`; the iOS index
+  matches the same development build. Generated asset scans found none of the
+  five saved provider credentials, and no transaction executor in the public code.
+- The mobile release check exited 1 and refused the development/localhost origin
+  as intended. That is a successful release-boundary check, not store readiness.
+
+Private artifacts, full logs and SHA-256 checksums are preserved in
+`data/review-20261028/evm/native-checkpoint/receipt.json`, with
+`blunts-wallet-debug.apk` and `ios-wallet-simulator-unsigned.tgz` (mode 0600).
+The server remains loopback-only; the application health still reports transactions
+disabled. These build receipts supersede the earlier statement that no fresh native
+build existed for this branch, but do not establish native runtime transport,
+installed mobile wallet connection/signing, owner-account continuity, real-money
+acceptance, store approval or release signing. Those remain separate gates.
+
+Reproduce without changing system defaults:
+
+```sh
+MOBILE_API_ORIGIN=http://localhost:8745 VITE_PUBLIC_APP_ORIGIN= npm run mobile:sync -- --development
+JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+ANDROID_HOME=/Users/nubs/Library/Android/sdk ANDROID_SDK_ROOT=/Users/nubs/Library/Android/sdk \
+npm run android:debug
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
+  -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+  -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath data/ios-build CODE_SIGNING_ALLOWED=NO build
+```
+
+Use paths appropriate to the reviewed machine. Do not install this development
+artifact onto a personal device or publish it as an investment product without
+its respective owner/release approvals and runtime qualification.
