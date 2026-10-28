@@ -1,6 +1,6 @@
 .evm-network {
   position: absolute;
-  top: 78px;
+  top: calc(env(safe-area-inset-top, 0px) + 78px);
   left: 24px;
   right: 24px;
   display: flex;
