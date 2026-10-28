@@ -566,3 +566,32 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 Use paths appropriate to the reviewed machine. Do not install this development
 artifact onto a personal device or publish it as an investment product without
 its respective owner/release approvals and runtime qualification.
+
+## Actual iOS Simulator market-read runtime
+
+A new isolated **Blunts Local QA 2026-10-28** iPhone 17 Pro simulator (iOS 27.0,
+UDID `54F01CF2-FFA6-48B0-8975-7CADBE54C076`) was provisioned and booted. The
+unsigned app from the recorded `7c564f8` native build was installed there and
+launched, without opening a personal device, signing into accounts, importing
+keys or connecting a wallet. This is a disposable test device, not the owner's
+phone or an existing simulator profile.
+
+The app console observed **WebView loaded**, then **CapacitorHttp request**, then
+a successful QQQ market-data response containing the current bid/ask, chain 4663,
+active status and `transactionsEnabled=false`. The local backend recorded the
+corresponding market reads. This upgrades the native **market transport** from
+source-only evidence to an actual installed simulator runtime receipt.
+
+Simulator was not exposed in the current desktop computer-control app inventory;
+its name and Xcode app path both returned unavailable controls. No alternate UI
+injection was used. Therefore the screen/animations, tap flows, quote interactions,
+external wallet launch, actual signing and physical-device acceptance are still
+**unverified**. Console/network success is not a visible UI pass. Android was
+compiled but not installed or runtime-tested in this checkpoint.
+
+The own-app console and checksum receipt are private under
+`data/review-20261028/evm/native-checkpoint/ios-runtime-receipt.json` and
+`ios-runtime-console.log` (0600). The QA app was terminated and only this newly
+created simulator was shut down after verification. Its data remains available
+for resuming; no unrelated simulator or personal-device state was changed.
+Loopback preview remains available and real signing remains disabled.

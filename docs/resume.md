@@ -331,3 +331,12 @@ before sync. Both SDK/JDK/Xcode selections were command-scoped. The release guar
 correctly refuses these development assets. No physical-device installation,
 wallet connection/signing, release signing, deployment or publishing occurred.
 Compile success does not prove native runtime transport or mobile wallet acceptance.
+
+Actual native market-read proof now exists: a new isolated iPhone 17 Pro simulator
+(iOS 27.0; UDID 54F01CF2-FFA6-48B0-8975-7CADBE54C076) installed/launched the unsigned
+recorded app and logged WebView loaded → CapacitorHttp request → QQQ data with
+transactions disabled. Receipt: native-checkpoint/ios-runtime-receipt.json.
+The app was terminated and this simulator shut down; data preserved. Do not
+confuse this with visual QA: Simulator UI controls were unavailable, so rendering,
+quote taps, external wallet connection/signing and physical-phone proof remain
+missing. No personal device/account/wallet was touched.
