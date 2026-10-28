@@ -240,3 +240,173 @@ test("late receipt and outage observations cannot overwrite a newer journal revi
   const stale = { ...initial, observation: "unavailable" as const };
   assert.equal(f.journal.saveObservation(stale, initial).state, "reorged");
 });
+
+test("verified cancellation preserves original instruction/hash, consumes one saved nonce and never creates a new request", async () => {
+  const f = fixture();
+  const original = {
+    planId: f.plan.id,
+    step: 0,
+    chainId: 4663 as const,
+    owner,
+    call: f.plan.calls[0],
+    nonce: 7,
+    state: "pending" as const,
+    hash,
+  };
+  f.journal.save(original);
+  const cancelHash = `0x${"c".repeat(64)}` as Hex;
+  f.reader.getTransaction = async () => ({
+    hash: cancelHash,
+    from: owner,
+    to: owner,
+    input: "0x",
+    value: 0n,
+    nonce: 7,
+  });
+  f.reader.getTransactionReceipt = async () => ({
+    status: "success",
+    transactionHash: cancelHash,
+    blockHash,
+    blockNumber: 10n,
+  });
+  const replaced = await trackWalletTransaction(
+    cancelHash,
+    owner,
+    f.journal,
+    f.reader,
+  );
+  assert.equal(replaced.state, "replaced");
+  assert.equal(replaced.hash, hash);
+  assert.deepEqual(replaced.call, original.call);
+  assert.equal(replaced.replacement?.kind, "cancel");
+  assert.equal(replaced.replacement?.hash, cancelHash);
+  assert.equal(f.journal.read().length, 1);
+  f.reader.getTransaction = async () => {
+    throw Error("RPC outage");
+  };
+  assert.equal(
+    (await trackWalletTransaction(cancelHash, owner, f.journal, f.reader))
+      .observation,
+    "unavailable",
+  );
+  f.reader.getBlock = async () => ({ hash });
+  assert.equal(
+    (await trackWalletTransaction(cancelHash, owner, f.journal, f.reader))
+      .state,
+    "reorged",
+  );
+  assert.equal(f.journal.read()[0].hash, hash);
+});
+test("unmined, wrong-nonce and changed-call replacements leave the pending request blocked", async () => {
+  for (const reason of ["pending", "nonce", "call", "canonical"]) {
+    const f = fixture();
+    f.journal.save({
+      planId: f.plan.id,
+      step: 0,
+      chainId: 4663,
+      owner,
+      call: f.plan.calls[0],
+      nonce: 7,
+      state: "pending",
+      hash,
+    });
+    const nextHash = `0x${"d".repeat(64)}` as Hex;
+    f.reader.getTransaction = async () => ({
+      hash: nextHash,
+      from: owner,
+      to: reason === "call" ? cash.address : owner,
+      input:
+        reason === "call"
+          ? encodeFunctionData({
+              abi: approvalAbi,
+              functionName: "approve",
+              args: [dex.router, 1n],
+            })
+          : "0x",
+      value: 0n,
+      nonce: reason === "nonce" ? 8 : 7,
+    });
+    f.reader.getTransactionReceipt = async () => {
+      if (reason === "pending") throw Error("no receipt");
+      return {
+        status: "success",
+        transactionHash: nextHash,
+        blockHash,
+        blockNumber: 10n,
+      };
+    };
+    if (reason === "canonical") f.reader.getBlock = async () => ({ hash });
+    await assert.rejects(
+      trackWalletTransaction(nextHash, owner, f.journal, f.reader),
+    );
+    assert.equal(f.journal.read()[0].state, "pending");
+    assert.equal(f.journal.read()[0].replacement, undefined);
+    assert.equal(f.journal.read()[0].hash, hash);
+  }
+});
+test("same-call replacement and reverted replacement require canonical receipt proof and retain the original hash", async () => {
+  for (const outcome of ["success", "reverted"] as const) {
+    const f = fixture();
+    f.journal.save({
+      planId: f.plan.id,
+      step: 0,
+      chainId: 4663,
+      owner,
+      call: f.plan.calls[0],
+      nonce: 7,
+      state: "pending",
+      hash,
+    });
+    const nextHash = `0x${"e".repeat(64)}` as Hex;
+    f.reader.getTransaction = async () => ({
+      hash: nextHash,
+      from: owner,
+      to: f.plan.calls[0].to,
+      input: f.plan.calls[0].data,
+      value: 0n,
+      nonce: 7,
+    });
+    f.reader.getTransactionReceipt = async () => ({
+      status: outcome,
+      transactionHash: nextHash,
+      blockHash,
+      blockNumber: 10n,
+    });
+    const r = await trackWalletTransaction(
+      nextHash,
+      owner,
+      f.journal,
+      f.reader,
+    );
+    assert.equal(r.state, "replaced");
+    assert.equal(r.replacement?.kind, "same_call");
+    assert.equal(r.replacement?.outcome, outcome);
+    assert.equal(r.hash, hash);
+    assert.equal(f.journal.read().length, 1);
+  }
+});
+
+test("oversized activity is rejected before replacing readable stored history", () => {
+  const f = fixture();
+  const original = {
+    planId: f.plan.id,
+    step: 0,
+    chainId: 4663 as const,
+    owner,
+    call: f.plan.calls[0],
+    nonce: 7,
+    state: "pending" as const,
+    hash,
+  };
+  f.journal.save(original);
+  const before = JSON.stringify(f.journal.read());
+  assert.throws(() =>
+    f.journal.save({
+      ...original,
+      planId: `0x${"9".repeat(64)}` as Hex,
+      nonce: 8,
+      call: { ...original.call, data: ("0x" + "aa".repeat(110000)) as Hex },
+    }),
+  );
+  assert.equal(JSON.stringify(f.journal.read()), before);
+});

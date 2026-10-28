@@ -376,3 +376,11 @@ submission. Actual receipts succeeded, QQQ returned to zero and browser reload
 recovered four matching records. Private receipt: ui-fork-1793189003222/receipt.json.
 Temporary QA ports 8752/8753 were stopped; actual preview 8745 stayed active.
 This does not prove installed-wallet/mobile/mainnet/finality acceptance.
+
+Latest recovery work verifies same-call replacements and zero-value self-send
+wallet cancellations against a saved sender/nonce and canonical receipt. Original
+hash/call are preserved with nested replacement proof; no cancellation or retry is
+sent. Verified replacement allows only a fresh quote/review. Unknown/noncanonical
+outcomes stay blocked; reorgs re-block. A pre-write size guard prevents newly
+saved activity from exceeding its own readable limit. This checkpoint has unit
+and browser-fixture proof, not an actual fork/mainnet cancellation receipt yet.

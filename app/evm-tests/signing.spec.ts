@@ -200,7 +200,21 @@ async function setup(page: Page, decline = false, loseResponse = false) {
   await page
     .getByRole("button", { name: "Review wallet steps", exact: true })
     .click();
-  return { sends };
+  return {
+    sends,
+    addCancellation: () => {
+      const hash = "0x" + "f".repeat(64);
+      txs.set(hash, {
+        from: owner,
+        to: owner,
+        data: "0x",
+        value: "0x0",
+        nonce: sends[0].nonce,
+        chainId: "0x1237",
+      });
+      return hash;
+    },
+  };
 }
 test("local signing requests finite approval and swap separately, with no automatic next transaction", async ({
   page,
@@ -318,5 +332,58 @@ test("unknown wallet outcome blocks another local signing request even after a n
       exact: true,
     }),
   ).toHaveCount(0);
+  expect(sends).toHaveLength(1);
+});
+
+test("tracking an included wallet cancellation preserves the original attempt and unlocks only a fresh review", async ({
+  page,
+}) => {
+  const { sends, addCancellation } = await setup(page);
+  const signing = page.getByRole("region", { name: "Wallet signing" });
+  await signing.getByRole("checkbox").check();
+  await signing
+    .getByRole("button", {
+      name: "Approve exact amount in wallet",
+      exact: true,
+    })
+    .click();
+  await expect(
+    signing.getByText("Request sent. Check its receipt before continuing.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const originalHash = "0x" + "1".padStart(64, "0"),
+    cancelHash = addCancellation();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.locator(".evm-connect button").click();
+  await page.getByText("Activity on this browser", { exact: true }).click();
+  await page.getByLabel("Transaction hash", { exact: true }).fill(cancelHash);
+  await page
+    .getByRole("button", { name: "Track transaction", exact: true })
+    .click();
+  await expect(
+    page.getByText("Wallet cancellation included", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".evm-activity-list li")).toHaveCount(1);
+  const records = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key) ?? "[]"),
+    `blunts:swap:4663:${owner}`,
+  );
+  expect(records[0].hash).toBe(originalHash);
+  expect(records[0].replacement.hash).toBe(cancelHash);
+  expect(records[0].state).toBe("replaced");
+  expect(sends).toHaveLength(1);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Review wallet steps", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Wallet signing" }).getByRole("button", {
+      name: "Approve exact amount in wallet",
+      exact: true,
+    }),
+  ).toBeDisabled();
   expect(sends).toHaveLength(1);
 });

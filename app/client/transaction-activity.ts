@@ -83,17 +83,45 @@ export async function trackWalletTransaction(
     (await reader.getChainId()) !== 4663
   )
     throw Error("Wallet or chain did not match.");
-  const tx = await reader.getTransaction({ hash: hash as Hex });
+  const records = journal.read();
+  const linked = records.find(
+    (r) => r.replacement?.hash.toLowerCase() === hash.toLowerCase(),
+  );
+  let tx: Awaited<ReturnType<ReceiptReader["getTransaction"]>>;
+  try {
+    tx = await reader.getTransaction({ hash: hash as Hex });
+  } catch {
+    if (linked) return replacementUnavailable(linked, reader, journal);
+    throw Error("Transaction read is unavailable.");
+  }
   if (
     tx.hash.toLowerCase() !== hash.toLowerCase() ||
     tx.from.toLowerCase() !== owner.toLowerCase()
   )
     throw Error("Transaction belongs to another wallet.");
+  const original = records.find(
+    (r) => r.hash?.toLowerCase() === hash.toLowerCase(),
+  );
+  const candidates = records.filter(
+    (r) =>
+      r.nonce === tx.nonce &&
+      r.hash?.toLowerCase() !== hash.toLowerCase() &&
+      !r.replacement,
+  );
+  const isCancel =
+    tx.to?.toLowerCase() === owner.toLowerCase() &&
+    tx.input === "0x" &&
+    tx.value === 0n;
+  if (linked) return observeReplacement(linked, tx, reader, journal);
+  if (!original && (isCancel || candidates.some((r) => r.hash))) {
+    if (candidates.length !== 1)
+      throw Error("Replacement must match exactly one prior nonce.");
+    return observeReplacement(candidates[0], tx, reader, journal);
+  }
   const call = supportedWalletCall(owner, tx.to, tx.input, tx.value);
   const id = keccak256(
     toBytes(`tracked:4663:${owner.toLowerCase()}:${hash.toLowerCase()}`),
   );
-  const records = journal.read();
   let record = records.find(
     (r) => r.hash?.toLowerCase() === hash.toLowerCase(),
   );
@@ -129,4 +157,110 @@ export async function trackWalletTransaction(
     journal.save(record);
   }
   return reconcileSwapAttempt(record, reader, journal);
+}
+
+async function observeReplacement(
+  record: SwapAttempt,
+  tx: Awaited<ReturnType<ReceiptReader["getTransaction"]>>,
+  reader: ReceiptReader,
+  journal: SwapJournal,
+): Promise<SwapAttempt> {
+  const kind =
+    tx.to?.toLowerCase() === record.owner.toLowerCase() &&
+    tx.value === 0n &&
+    tx.input === "0x"
+      ? "cancel"
+      : tx.to?.toLowerCase() === record.call.to.toLowerCase() &&
+          tx.value === 0n &&
+          tx.input === record.call.data
+        ? "same_call"
+        : undefined;
+  if (
+    !kind ||
+    tx.from.toLowerCase() !== record.owner.toLowerCase() ||
+    tx.nonce !== record.nonce ||
+    (record.replacement &&
+      record.replacement.hash.toLowerCase() !== tx.hash.toLowerCase())
+  )
+    throw Error("Replacement changed the saved instruction or wallet.");
+  let receipt: Awaited<ReturnType<ReceiptReader["getTransactionReceipt"]>>;
+  try {
+    receipt = await reader.getTransactionReceipt({ hash: tx.hash });
+  } catch {
+    if (!record.replacement)
+      throw Error(
+        "Replacement is not included yet. Original request remains preserved.",
+      );
+    return replacementUnavailable(record, reader, journal);
+  }
+  if (
+    receipt.transactionHash.toLowerCase() !== tx.hash.toLowerCase() ||
+    !["success", "reverted"].includes(receipt.status)
+  )
+    throw Error("Replacement receipt did not match.");
+  const [block, head] = await Promise.all([
+    reader.getBlock({ blockNumber: receipt.blockNumber }),
+    reader.getBlockNumber(),
+  ]);
+  if (block.hash !== receipt.blockHash || head < receipt.blockNumber) {
+    if (record.replacement)
+      return journal.saveObservation(
+        {
+          ...record,
+          state: "reorged",
+          checkedAt: Date.now(),
+          observation: "verified",
+        },
+        record,
+      );
+    throw Error("Replacement inclusion is not canonical.");
+  }
+  const now = Date.now();
+  return journal.saveObservation(
+    {
+      ...record,
+      state: "replaced",
+      replacement: {
+        hash: tx.hash,
+        kind,
+        outcome: receipt.status,
+        blockHash: receipt.blockHash,
+        blockNumber: String(receipt.blockNumber),
+        observedAt: now,
+      },
+      observedAt: now,
+      checkedAt: now,
+      observation: "verified",
+    },
+    record,
+  );
+}
+
+async function replacementUnavailable(
+  record: SwapAttempt,
+  reader: ReceiptReader,
+  journal: SwapJournal,
+) {
+  if (!record.replacement) throw Error("Replacement proof is missing.");
+  try {
+    const block = await reader.getBlock({
+      blockNumber: BigInt(record.replacement.blockNumber),
+    });
+    if (block.hash !== record.replacement.blockHash)
+      return journal.saveObservation(
+        {
+          ...record,
+          state: "reorged",
+          checkedAt: Date.now(),
+          observation: "verified",
+        },
+        record,
+      );
+  } catch {
+    /* An outage alone does not prove a reorg. */
+  }
+  return journal.saveObservation(
+    { ...record, checkedAt: Date.now(), observation: "unavailable" },
+    record,
+  );
 }

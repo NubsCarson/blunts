@@ -29,8 +29,9 @@ Reviewed direction/amount are saved for that wallet in this browser. After reloa
 reconnect, open Wallet and resume the review; a fresh quote is always required.
 Quotes more than 5% below the adjusted reference output are rejected.
 Wallet → Activity can track an existing compatible transaction, refresh its
-receipt and export this browser's records. Inclusion is shown separately from
-Ethereum finality. Wallet-step review also checks ETH fee readiness.
+receipt and export this browser's records. It can also verify an equivalent
+replacement or wallet cancellation for a saved nonce while preserving the original.
+Inclusion is shown separately from Ethereum finality. Wallet-step review also checks ETH fee readiness.
 
 The quote path reads direct Uniswap pools. It does not submit swaps or withdraw
 dollars to a bank. Robinhood Stock Tokens carry issuer/jurisdiction restrictions,

@@ -29,7 +29,19 @@ const attemptSchema = z
       "reverted",
       "reorged",
       "mismatch",
+      "replaced",
     ]),
+    replacement: z
+      .object({
+        hash,
+        kind: z.enum(["same_call", "cancel"]),
+        outcome: z.enum(["success", "reverted"]),
+        blockHash: hash,
+        blockNumber: z.string().regex(/^\d+$/),
+        observedAt: z.number().int().safe().nonnegative(),
+      })
+      .strict()
+      .optional(),
     tracked: z.literal(true).optional(),
     observedAt: z.number().int().safe().nonnegative().optional(),
     checkedAt: z.number().int().safe().nonnegative().optional(),
@@ -38,7 +50,14 @@ const attemptSchema = z
     blockHash: hash.optional(),
     blockNumber: z.string().regex(/^\d+$/).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((record, context) => {
+    if (record.state === "replaced" && !record.replacement)
+      context.addIssue({
+        code: "custom",
+        message: "Replacement inclusion proof is required.",
+      });
+  });
 export type SwapAttempt = z.infer<typeof attemptSchema>;
 export interface JournalStorage {
   getItem(key: string): string | null;
@@ -99,12 +118,19 @@ export class SwapJournal {
       if (
         previous.nonce !== validated.nonce ||
         JSON.stringify(previous.call) !== JSON.stringify(validated.call) ||
-        (previous.hash && previous.hash !== validated.hash)
+        (previous.hash && previous.hash !== validated.hash) ||
+        (previous.replacement &&
+          previous.replacement.hash !== validated.replacement?.hash)
       )
         throw Error("Existing wallet instruction cannot be replaced.");
       records[index] = validated;
     }
-    this.storage.setItem(this.key, JSON.stringify(records));
+    const serialized = JSON.stringify(records);
+    if (serialized.length > 200000)
+      throw Error(
+        "Activity storage limit reached. Export existing records before another request.",
+      );
+    this.storage.setItem(this.key, serialized);
   }
   /** Caller must hold the wallet's cross-tab lock. A slow observation may
    * never overwrite a record changed since its read began. */

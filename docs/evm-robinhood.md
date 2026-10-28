@@ -740,3 +740,48 @@ The script changes only virtual fork state and an isolated browser context. Stop
 only the task-owned QA processes afterward. Physical/native wallet confirmation,
 actual eligible-holder/mainnet receipt and finality, fee-policy acceptance and
 public-release approval remain unproven gates.
+
+## Read-only replacement and wallet-cancellation recovery
+
+Activity can now verify a replacement hash against one saved sender/nonce. Only
+an identical zero-ETH call or a zero-value empty-data self-send (wallet cancellation)
+is accepted. A distinct request/recipient/nonce, ambiguous prior records, unmined
+replacement, wrong receipt hash or noncanonical block leaves the original attempt
+blocked. The observer never creates or sends a cancellation/replacement itself.
+
+A canonical replacement receipt adds nested replacement proof to the original
+record and marks it `replaced`. The original call, hash and nonce are immutable;
+no extra economic attempt is created. A reverted replacement also consumes that
+nonce but is labeled reverted, not successful execution of the original call.
+Recovery requires a fresh quote/review; it does not authorize the next step of
+an old plan or automatically retry a previously uncertain transaction. Same-call
+replacement does not silently change the earlier amount, recipient or limits.
+
+Receipt refresh uses the replacement hash, not the displaced original hash. RPC
+outage preserves last proof and reports unavailable. A contradictory canonical
+block marks the record reorged again, which blocks new requests. Only one proven
+replacement hash is retained per original instruction; a later distinct replacement
+after a reorg remains a manual reconciliation case rather than an inferred retry.
+This is L2 receipt verification, not an independent Ethereum-finality proof.
+
+The UI shows original and replacement links, explicit cancellation/equivalent/
+reverted labels, and prompts for a fresh quote after replacement. The browser
+scenario verifies a pending approval → tracked cancellation → preserved original
+hash and one journal row → new review still requiring fresh acknowledgement.
+No new wallet request is made by that recovery. Its cancellation receipt is an
+intercepted RPC fixture; actual cancellation-on-fork qualification has not yet
+been performed. Prior signed full-cycle fork receipts are a separate boundary.
+
+Unit coverage includes canonical cancellation, same-call and reverted replacement,
+unmined/wrong-nonce/changed-call/noncanonical rejection, outage/reorg readback and
+original-record immutability. A journal write now also checks the serialized size
+before storage so it cannot replace readable history with an over-limit document.
+Existing oversized/corrupt history is preserved rather than auto-deleted.
+
+Replacement checkpoint final checks: **70 backend tests passed with two optional
+integration skips**, and **24 browser cases passed** across Chromium, mobile
+Chromium and WebKit. Build/typecheck, formatting, whitespace and UI detector passed.
+Full logs are private under `data/review-20261028/evm/replacement-recovery/`.
+The local preview remains enabled only under the owner's loopback-signing approval;
+no real-wallet cancellation, personal key use, mainnet submission or deployment
+was performed during this change.

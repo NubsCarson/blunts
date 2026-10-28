@@ -19,6 +19,7 @@ const labels: Record<SwapAttempt["state"], string> = {
   reverted: "Transaction reverted",
   reorged: "Chain inclusion changed",
   mismatch: "Transaction did not match",
+  replaced: "Original request replaced",
 };
 export function TransactionActivity({ owner }: { owner: Address }) {
   const [records, setRecords] = useState<SwapAttempt[]>([]),
@@ -95,7 +96,14 @@ export function TransactionActivity({ owner }: { owner: Address }) {
       const journal = new SwapJournal(window.localStorage, owner, 4663);
       await withActivityLock(journal.key, async () => {
         if (version !== epoch.current) return;
-        await reconcileSwapAttempt(record, chainReader, journal);
+        if (record.replacement)
+          await trackWalletTransaction(
+            record.replacement.hash,
+            owner,
+            journal,
+            chainReader,
+          );
+        else await reconcileSwapAttempt(record, chainReader, journal);
       });
       if (version === epoch.current) setRecords(journal.read());
     } catch {
@@ -142,8 +150,8 @@ export function TransactionActivity({ owner }: { owner: Address }) {
         <summary>Activity on this browser</summary>
         <div>
           <p>
-            Track an existing approval or QQQ/USDG swap from this wallet.
-            Checking a hash never sends a transaction.
+            Track an existing approval, QQQ/USDG swap, or wallet cancellation
+            for a saved request. Checking a hash never sends a transaction.
           </p>
           <form
             onSubmit={(e) => {
@@ -192,6 +200,41 @@ export function TransactionActivity({ owner }: { owner: Address }) {
                           : "Token approval"}
                     </strong>
                     <p>{labels[record.state]}</p>
+                    {record.replacement && (
+                      <>
+                        <p>
+                          {record.state !== "replaced"
+                            ? "Replacement inclusion needs checking"
+                            : record.replacement.outcome === "reverted"
+                              ? "Replacement reverted; the original nonce was consumed."
+                              : record.replacement.kind === "cancel"
+                                ? "Wallet cancellation included"
+                                : "Equivalent replacement included"}
+                        </p>
+                        <a
+                          href={`${robinhood.blockExplorers!.default.url}/tx/${record.replacement.hash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          View replacement{" "}
+                          {record.replacement.hash.slice(0, 10)}…
+                        </a>
+                        <p>
+                          Original request preserved. Review a fresh quote
+                          before another request. Ethereum finality has not been
+                          checked.
+                        </p>
+                        {!record.hash && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void refresh(record)}
+                          >
+                            Check replacement receipt
+                          </button>
+                        )}
+                      </>
+                    )}
                     {record.observation === "unavailable" && (
                       <p>
                         Latest receipt check unavailable; showing the last
@@ -204,12 +247,12 @@ export function TransactionActivity({ owner }: { owner: Address }) {
                         withdrawals are separate.
                       </p>
                     )}
-                    {!record.hash ? (
+                    {!record.hash && !record.replacement ? (
                       <p>
                         Find the hash in your wallet’s activity before trying
                         again. Blunts will not repeat this attempt.
                       </p>
-                    ) : (
+                    ) : record.hash ? (
                       <>
                         <a
                           href={`${robinhood.blockExplorers!.default.url}/tx/${record.hash}`}
@@ -227,7 +270,7 @@ export function TransactionActivity({ owner }: { owner: Address }) {
                           Check receipt
                         </button>
                       </>
-                    )}
+                    ) : null}
                     {record.observedAt && (
                       <small>
                         Last verified{" "}

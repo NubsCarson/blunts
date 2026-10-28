@@ -169,7 +169,9 @@ export function WalletSigning({
             <p role="status">
               {existing.state === "cancelled"
                 ? "Wallet request declined. No next step was started."
-                : "This step already has an attempt."}{" "}
+                : existing.state === "replaced"
+                  ? "This request was replaced in your wallet. Review a fresh quote."
+                  : "This step already has an attempt."}{" "}
               Preview again only after checking your wallet activity.
             </p>
           ) : (
@@ -212,11 +214,14 @@ export function WalletSigning({
               </button>
             </>
           )}
-          {(expired || existing?.state === "cancelled") && !pending && (
-            <button type="button" disabled={busy} onClick={onRefresh}>
-              Refresh quote and review
-            </button>
-          )}
+          {(expired ||
+            existing?.state === "cancelled" ||
+            existing?.state === "replaced") &&
+            !pending && (
+              <button type="button" disabled={busy} onClick={onRefresh}>
+                Refresh quote and review
+              </button>
+            )}
         </>
       )}
       {error && (
