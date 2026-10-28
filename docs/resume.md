@@ -1,3 +1,25 @@
+# Current direction — wallet-first Robinhood Chain, October 28
+
+The owner explicitly changed direction: preserve the Dinari/MoonPay work and
+replace the active app with a normal EVM wallet + Robinhood stock-token flow.
+This supersedes the provider-first work plan and all older restart instructions
+below. No deployment, real-money transaction or publishing is approved.
+
+- Active branch: `codex/evm-robinhood-local`.
+- Preserved provider branch: `codex/local-review-20261027` at `e89c958`.
+- `npm start` now runs `app/server/evm-main.ts`, loopback port 8745. It loads no
+  credential file, auth provider, old ledger, provider journal or background worker.
+- Original data and private provider credentials remain untouched and Git-ignored.
+- `npm run start:legacy` runs the previous backend; `/` redirects to `/legacy`
+  for the retained old React UI. Stop any process holding its embedded data first.
+- The old provider version can be restored by switching to the preserved branch
+  after stopping the preview. Never reset/clean data to switch versions.
+- Read [wallet-first implementation](evm-robinhood.md) for current proof and gaps.
+
+The historical checkpoint below is preserved for recovery, not the active plan.
+
+---
+
 # Local resume checkpoint — updated October 28, 2026
 
 ## October 28 resumed work

@@ -772,6 +772,7 @@ export async function createApp(options: AppOptions) {
     return { ok: true };
   });
   if (options.serveStatic) {
+    app.get("/", async (_, reply) => reply.redirect("/legacy"));
     const root = resolve("dist");
     if (!existsSync(`${root}/index.html`))
       throw new Error("Build the browser app first with npm run build.");

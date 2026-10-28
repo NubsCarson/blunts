@@ -28,7 +28,7 @@ export default defineConfig({
     trace: "off",
   },
   webServer: {
-    command: "npm start",
+    command: "npm run start:legacy",
     env: {
       AUTH_PROVIDER: "steward",
       STEWARD_API_URL: parsed.origin,

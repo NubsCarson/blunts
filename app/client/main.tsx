@@ -11,6 +11,7 @@ import { AmountPicker } from "./AmountPicker";
 import { CashOut } from "./CashOut";
 import { BanknoteArrowDown } from "lucide-react";
 import { StewardLogin } from "./StewardLogin";
+import { EvmApp } from "./EvmApp";
 import { HowItWorks } from "./HowItWorks";
 import { request, native, shareStatement, onResume, onBack } from "./platform";
 type Intent = {
@@ -1413,4 +1414,6 @@ function App() {
     </>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  window.location.pathname === "/legacy" ? <App /> : <EvmApp />,
+);

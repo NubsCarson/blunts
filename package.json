@@ -7,11 +7,11 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "tsx watch app/server/main.ts",
+    "dev": "tsx watch app/server/evm-main.ts",
     "build": "tsc --noEmit && vite build",
-    "start": "tsx app/server/main.ts",
+    "start": "tsx app/server/evm-main.ts",
     "test": "tsx --test --test-concurrency=1 app/tests/*.test.ts",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --config playwright.evm.config.ts",
     "test:local-services": "playwright test --config playwright.steward.config.ts",
     "check": "npm run build && npm test",
     "db:backup": "tsx app/server/backup.ts",
@@ -24,7 +24,9 @@
     "android:debug": "cd android && ./gradlew assembleDebug",
     "android:bundle": "cd android && ./gradlew bundleRelease",
     "ios:open": "cap open ios",
-    "mobile:release-check": "node scripts/check-mobile.mjs"
+    "mobile:release-check": "node scripts/check-mobile.mjs",
+    "start:legacy": "tsx app/server/main.ts",
+    "test:e2e:legacy": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
@@ -47,6 +49,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "three": "^0.186.1",
+    "viem": "^2.57.12",
     "zod": "^4.6.5"
   },
   "devDependencies": {
