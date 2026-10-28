@@ -6,6 +6,7 @@ import {
 } from "../shared/swap-journal";
 import type { SwapPlan } from "../shared/swap-plan";
 import type { Market } from "../shared/robinhood";
+import { request } from "./platform";
 import { prepareSwap } from "./prepare-swap";
 import { estimateFirstStepFee } from "./gas-readiness";
 import { chainReader } from "./chain";
@@ -35,11 +36,9 @@ export async function requestWalletStep(
     {
       ...localExecutionPolicy,
       preflight: async (plan, index) => {
-        const response = await fetch("/api/onchain/market", {
-          signal: AbortSignal.timeout(15000),
-        });
+        const response = await request("/onchain/market", undefined, {});
         if (!response.ok) throw Error("Fresh market reference unavailable.");
-        const reference = (await response.json()) as Market;
+        const reference = response.data as Market;
         const fresh = await prepareSwap(
           plan.quote,
           owner,

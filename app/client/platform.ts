@@ -3,7 +3,7 @@ import { App } from "@capacitor/app";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 export const native = Capacitor.isNativePlatform();
-const origin = import.meta.env.VITE_API_ORIGIN as string | undefined;
+const origin = import.meta.env?.VITE_API_ORIGIN as string | undefined;
 export async function request(
   path: string,
   body: unknown,

@@ -56,3 +56,14 @@ Stop running services before switching source branches or opening the same
 embedded database from a second process. Never reset/clean data to switch versions.
 
 Nothing is pushed, deployed, publicly published or authorized to move real money.
+
+
+## Mobile wallet entry
+
+On a public HTTPS app, the no-wallet chooser offers MetaMask's mobile dapp-browser
+handoff without a project/API key. Localhost instead explains why the phone cannot
+reach this Mac. This does not establish installed-app connection or native pairing.
+No public host was created. A future native build can explicitly set the public,
+non-secret `VITE_PUBLIC_APP_ORIGIN`; `MOBILE_API_ORIGIN` still configures native
+API transport during `mobile:sync`. Hosting, native builds and physical-device
+wallet acceptance remain separate approval/verification steps.

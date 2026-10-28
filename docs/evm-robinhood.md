@@ -470,3 +470,50 @@ zero ETH call value, exact 25-USDG approval and the fixed spender explorer link,
 then verify only connection/read wallet methods occurred. Build/typecheck,
 formatting, whitespace and the UI detector passed. No real-wallet request, native
 build, new fork execution, activation or deployment is claimed for this UI change.
+
+## Keyless mobile dapp-browser handoff
+
+The wallet chooser now supports MetaMask's documented mobile **dapp-browser**
+handoff at `https://link.metamask.io/dapp/{host}/` when there is no injected wallet
+and an eligible HTTPS app origin is available. It does not use MetaMask's send,
+buy, sell or approval deeplinks and requires no relay project ID or API key. The
+handoff contains only the app origin; user addresses, amounts, sessions, routes,
+queries and fragments are never included. It is a user-clicked link with no
+referrer, not automatic navigation or connection approval.
+
+Loopback/private numeric addresses, local/reserved host suffixes, HTTP, credentials,
+nonstandard ports and origins with paths/query/fragments are rejected. This is
+syntactic origin validation, not a DNS/reachability or ownership proof. The web
+UI uses its current origin; a native build may explicitly supply a public,
+non-secret `VITE_PUBLIC_APP_ORIGIN` after the owner chooses/approves that hosted
+app. No such deployment or public URL was created here. Localhost instead explains
+why a phone cannot open this Mac's local preview. MetaMask browsing has its own
+storage; browser-local reviews/activity are not silently transferred or synced.
+
+The primary source is MetaMask's
+[mobile deeplink guide](https://github.com/MetaMask/metamask-docs/blob/main/metamask-connect/evm/guides/metamask-exclusive/use-deeplinks.md).
+No consumer buy/sell flow, token send, app installation or account setup was
+started. The link path is prepared code, not an installed-mobile-wallet receipt.
+
+The wallet preview's market/quote reads and dormant preflight now use the existing
+platform request transport. Previously those reads used relative browser fetch,
+which would target Capacitor's local asset origin instead of its configured API.
+Browser mode remains same-origin; native mode uses the existing configured
+`VITE_API_ORIGIN` and Capacitor HTTP timeouts. The common browser timeout is now
+20 seconds (rather than the previous standalone 15-second fetch). No credentials
+or callback/transaction writes were added. Optional Vite-env access allows the
+disabled adapter to be imported in Node qualification without accessing a wallet.
+Native transport routing here is source-level evidence, not a fresh native build
+or physical-device acceptance. A full native pairing bridge is not implemented;
+this mobile option opens the hosted dapp inside the wallet instead.
+
+
+Mobile-entry validation completed: **65 backend tests passed with two optional
+integration skips**. Twelve browser cases passed across Chromium, mobile Chromium
+and WebKit. New cases verify that localhost has no external-wallet handoff and a
+virtual HTTPS origin constructs only the official dapp-entry link. The HTTPS page
+was intercepted and served from local test assets; no public deployment, real
+wallet, MetaMask launch or third-party navigation occurred. Unit checks cover
+private, malformed and secret-bearing origins. Build/typecheck, formatting,
+whitespace and UI detector passed. The writer remains absent from the UI bundle.
+The physical-mobile and native-build gates are still unproven.

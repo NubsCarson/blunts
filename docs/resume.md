@@ -315,3 +315,10 @@ Latest local UI work adds optional exact transaction review to prepared steps.
 Display and execution share canonical semantic/calldata verification; changed
 chain/token/amount/minimum/calls fail review. It shows spender, recipient, deadline
 and fee details without opening wallet requests. Mainnet activation is still off.
+
+Mobile follow-up prepares a keyless MetaMask dapp-browser handoff for explicitly
+public HTTPS origins. Localhost/private/session-bearing origins fail closed and
+show a local-preview explanation. Nothing was deployed or opened in a personal
+wallet. Wallet market/quote reads now use the existing platform HTTP transport,
+so native sources address their configured backend rather than local assets.
+Physical mobile connection/signing and fresh native builds remain unverified.

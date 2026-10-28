@@ -494,3 +494,77 @@ test("wallet walkthrough explains the actual route and keeps preview-only bounda
     page.getByRole("button", { name: "How it works", exact: true }),
   ).toBeVisible();
 });
+
+test("local no-wallet flow explains mobile handoff without sending localhost to an external wallet", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "ethereum", {
+      value: undefined,
+      configurable: true,
+    });
+  });
+  await page.route("**/api/onchain/market", (route) =>
+    route.fulfill({ status: 503, json: { error: "Fixture offline" } }),
+  );
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Connect wallet", exact: true })
+    .click();
+  await expect(page.getByText(/No browser wallet detected/)).toBeVisible();
+  await expect(
+    page.getByText(/This localhost preview cannot be opened on another device/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Open in MetaMask mobile", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Fill", exact: true }),
+  ).toBeVisible();
+});
+
+test("public HTTPS mobile handoff contains only the app origin and never starts a wallet transaction", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(window, "ethereum", {
+      value: undefined,
+      configurable: true,
+    }),
+  );
+  const requested: string[] = [];
+  await page.route("https://blunts.example.com/**", async (route) => {
+    const url = new URL(route.request().url());
+    requested.push(url.pathname);
+    if (url.pathname.startsWith("/api/"))
+      return route.fulfill({
+        status: 503,
+        json: { error: "Fixture market offline" },
+      });
+    const response = await page.request.get(
+      `http://localhost:8751${url.pathname}`,
+    );
+    await route.fulfill({ response });
+  });
+  await page.goto("https://blunts.example.com/");
+  await page
+    .getByRole("button", { name: "Connect wallet", exact: true })
+    .click();
+  const handoff = page.getByRole("link", {
+    name: "Open in MetaMask mobile",
+    exact: true,
+  });
+  await expect(handoff).toHaveAttribute(
+    "href",
+    "https://link.metamask.io/dapp/blunts.example.com/",
+  );
+  await expect(handoff).toHaveAttribute("rel", "noreferrer");
+  await expect(page.getByText(/saved reviews stay separate/)).toBeVisible();
+  expect(
+    requested.every(
+      (path) => !path.includes("send") && !path.includes("approve"),
+    ),
+  ).toBe(true);
+  // Do not follow the link: this is route construction proof, not installed-app acceptance.
+});

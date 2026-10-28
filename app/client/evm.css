@@ -275,3 +275,10 @@
 .evm-step-details a {
   min-height: 32px;
 }
+.evm-wallet-handoff {
+  font-weight: 700;
+  min-height: 44px;
+}
+.evm-wallet-help p {
+  margin-top: 12px;
+}

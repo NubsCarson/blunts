@@ -10,6 +10,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { HowItWorks } from "./HowItWorks";
+import { request } from "./platform";
+import { mobileWalletHandoff } from "../shared/mobile-wallet";
 import { WalletStepDetails } from "./WalletStepDetails";
 import { Tray } from "./Tray";
 import {
@@ -113,10 +115,8 @@ export function EvmApp() {
       if (loading || stopped) return;
       loading = true;
       try {
-        const r = await fetch("/api/onchain/market", {
-          signal: AbortSignal.timeout(15000),
-        });
-        const d = await r.json();
+        const r = await request("/onchain/market", undefined, {});
+        const d = r.data;
         if (!r.ok) throw Error(d.error);
         if (!stopped) {
           setMarket(d);
@@ -362,11 +362,12 @@ export function EvmApp() {
     setQuote(null);
     try {
       amountUnits(amount, panel === "fill" ? 6 : 18);
-      const response = await fetch(
-        `/api/onchain/quote?side=${panel}&amount=${encodeURIComponent(amount)}`,
-        { signal: AbortSignal.timeout(15000) },
+      const response = await request(
+        `/onchain/quote?side=${panel}&amount=${encodeURIComponent(amount)}`,
+        undefined,
+        {},
       );
-      const data = await response.json();
+      const data = response.data;
       if (!response.ok) throw Error(data.error);
       if (version === quoteEpoch.current && identity === epoch.current)
         setQuote(data);
@@ -390,6 +391,11 @@ export function EvmApp() {
   } catch {
     /* Unverified values stay unavailable. */
   }
+  const mobileHandoff = mobileWalletHandoff(
+    import.meta.env.VITE_NATIVE_BUILD === "true"
+      ? import.meta.env.VITE_PUBLIC_APP_ORIGIN
+      : window.location.origin,
+  );
   const rolled = (value ?? 0n) / 10000n;
   const short = account
     ? `${account.slice(0, 6)}…${account.slice(-4)}`
@@ -577,10 +583,35 @@ export function EvmApp() {
                   </button>
                 ))
               ) : (
-                <p className="evm-note">
-                  No browser wallet detected. Open Blunts in your wallet’s
-                  browser or enable an EVM wallet extension, then reload.
-                </p>
+                <div className="evm-wallet-help">
+                  <p className="evm-note">
+                    No browser wallet detected. Use an EVM wallet extension
+                    here, or open Blunts in your mobile wallet’s browser.
+                  </p>
+                  {mobileHandoff ? (
+                    <>
+                      <a
+                        className="evm-wallet-handoff"
+                        href={mobileHandoff}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open in MetaMask mobile
+                      </a>
+                      <p className="evm-fine">
+                        Opens this app’s public address in MetaMask. Connect
+                        there to continue. Browser history and saved reviews
+                        stay separate.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="evm-fine">
+                      This localhost preview cannot be opened on another device.
+                      A public HTTPS app address is needed for mobile handoff;
+                      nothing has been published.
+                    </p>
+                  )}
+                </div>
               )}
               <p className="evm-fine">
                 Connecting only requests your public address. Blunts never asks
