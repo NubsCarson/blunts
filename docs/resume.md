@@ -366,3 +366,13 @@ now reports `transactionsEnabled=true`. Final checks: 66 backend pass/two option
 skips, 21 browser fixture cases pass. Browser-control bridge was unavailable during
 refresh, so an already-open tab may need a reload. No personal wallet connection,
 private key use, real signature/trade, hosted/native signing or deployment occurred.
+
+Integrated local signing proof now exists beyond independent fixtures:
+`scripts/qualify-wallet-ui-fork.ts` drove the actual UI/adapter through four
+cryptographically signed transactions against deployed contracts on an isolated
+Anvil fork (source block 100058896; fork retains chain ID 4663 without response
+rewrites). Generated test key stayed in memory; no personal keys/funds or public
+submission. Actual receipts succeeded, QQQ returned to zero and browser reload
+recovered four matching records. Private receipt: ui-fork-1793189003222/receipt.json.
+Temporary QA ports 8752/8753 were stopped; actual preview 8745 stayed active.
+This does not prove installed-wallet/mobile/mainnet/finality acceptance.

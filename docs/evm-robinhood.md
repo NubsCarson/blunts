@@ -672,3 +672,71 @@ the control bridge reported `browser.user` unavailable; no claim is made that
 the owner's already-open tab was refreshed. Opening/reloading localhost loads
 the new controls. Publishing, hosted/native activation and agent-performed trades
 remain unapproved. Earlier read-only native artifacts are preserved unchanged.
+
+## Integrated UI → signed fork transactions → deployed contracts
+
+The actual local web app/execution adapter at source
+`85682deb3ec438d2d8e86d0f3de4f7b3058525e7` passed a complete UI-driven buy/sell
+against a fresh isolated Anvil fork sourced from Robinhood block **100058896**.
+This test intentionally retains **chain ID 4663** so the unchanged app's chain
+binding, preflight and signed requests are exercised. It is still a private
+loopback fork, not Robinhood mainnet; chain ID alone is never treated as proof.
+
+The harness in `scripts/qualify-wallet-ui-fork.ts` validates the fixed
+`http://127.0.0.1:8752` endpoint using both its chain ID and `anvil_nodeInfo` fork
+identity. All transaction writes go only to that loopback node. Browser RPC reads
+are method-allowlisted and forwarded to the fork without rewriting chain IDs.
+The separate loopback app server on 8753 uses the actual market/quote endpoints;
+its public-chain calls are read-only. No API quote/receipt JSON was fabricated
+for this integration run.
+
+A freshly generated test key stays only in the Node process; it is not sent into
+the page, stored on disk, logged or reused as a personal wallet. The virtual
+wallet is funded only in the fork. Its normal viem wallet client cryptographically
+signs requests and submits them to the fixed Anvil transport. Anvil logs recorded
+**four `eth_sendRawTransaction` calls**, with four successful contract receipts.
+No personal keys, owner wallet, hardware wallet, mainnet transaction or real funds
+were used. The public browser wallet interface is a harness adapter, so this is
+not an installed MetaMask/Rabby/mobile-wallet acceptance claim.
+
+The UI chose each step separately and checked its real fork receipt before the
+next request: USDG finite approval → QQQ buy → QQQ finite approval → full sell.
+Virtual USDG began at **50** and ended at **49.975006**, and QQQ returned to **0**.
+Those are disposable fork balances showing pool costs, not customer holdings or
+returns. A real page reload/reconnect recovered four included browser-journal
+records whose hashes match the four actual fork receipts. The success screenshot
+uses normal app copy but is **fork evidence only**, not public-chain inclusion or
+an Ethereum-finality assertion.
+
+Private evidence:
+`data/review-20261028/evm/ui-fork-1793189003222/receipt.json`, the Fill/Spark
+screenshots in that directory, and `ui-fork-anvil-third.log` (0600). Two earlier
+bootstrap attempts stopped before wallet requests because the standalone tsx
+runner emitted a `__name` helper into the serialized initializer. Page errors
+identified that harness issue; a plain JavaScript initializer fixed it without
+changing the app or weakening any wallet/chain/approval check. Failed-run
+screenshots/logs remain separate from the passing receipt.
+
+After qualification, the temporary fork (8752) and QA app server (8753) were
+stopped. The owner's actual local preview (8745) stayed running with the approved
+local-signing policy. Typecheck (including scripts), formatting and whitespace
+checks passed. App/backend code was unchanged in this checkpoint; prior 66-pass/
+two-skip backend and 21-case browser-fixture receipts are not relabeled as this
+contract-integration proof.
+
+To reproduce in three local terminals, use an unused fresh fork and do not point
+this harness at an owner wallet or alternate RPC:
+
+```sh
+npm exec --yes --package=@foundry-rs/anvil@1.7.1 -- anvil \
+  --fork-url https://rpc.mainnet.chain.robinhood.com --chain-id 4663 \
+  --accounts 0 --host 127.0.0.1 --port 8752 --no-storage-caching
+PORT=8753 npm start
+npx tsx scripts/qualify-wallet-ui-fork.ts
+```
+
+Keep the fork fresh because the public source RPC may prune historical state.
+The script changes only virtual fork state and an isolated browser context. Stop
+only the task-owned QA processes afterward. Physical/native wallet confirmation,
+actual eligible-holder/mainnet receipt and finality, fee-policy acceptance and
+public-release approval remain unproven gates.
