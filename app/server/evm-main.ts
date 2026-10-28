@@ -1,3 +1,5 @@
+import { ReferenceGapError } from "../shared/reference-price.js";
+import { amountUnits } from "../shared/robinhood.js";
 import Fastify from "fastify";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
@@ -53,8 +55,17 @@ app.get("/api/onchain/quote", async (req, reply) => {
       .code(400)
       .send({ error: "Choose Fill or Spark and a valid amount." });
   try {
-    return await quote(input.data.side, input.data.amount);
+    amountUnits(input.data.amount, input.data.side === "fill" ? 6 : 18);
   } catch {
+    return reply
+      .code(400)
+      .send({ error: "Enter a positive amount with supported precision." });
+  }
+  try {
+    return await quote(input.data.side, input.data.amount);
+  } catch (error) {
+    if (error instanceof ReferenceGapError)
+      return reply.code(409).send({ error: error.message });
     return reply.code(503).send({
       error:
         "No verified quote is available for that amount. Try again or reduce the amount.",

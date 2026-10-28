@@ -149,6 +149,48 @@ test("wallet-first preview connects without signup, reads balances and never sen
   await page.screenshot({ path: info.outputPath("prepared-wallet-steps.png") });
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.screenshot({ path: info.outputPath("evm-wallet-tray.png") });
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Connect wallet", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Connect wallet", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Browser wallet", exact: true })
+    .click();
+  await page.locator(".evm-connect button").click();
+  await expect(
+    page.getByRole("region", { name: "Saved review" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Resume Fill review", exact: true })
+    .click();
+  await expect(page.getByLabel("USDG to spend", { exact: true })).toHaveValue(
+    "25",
+  );
+  await expect(
+    page.getByText(
+      "Saved amount restored. Preview again for a fresh price and wallet review.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.locator(".evm-quote")).toHaveCount(0);
+  expect(
+    await page.evaluate(() => (window as any).fixtureWalletRequests),
+  ).toEqual(["eth_requestAccounts", "eth_chainId"]);
+  await page.screenshot({ path: info.outputPath("resumed-review.png") });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.evaluate(() => {
+    (window as any).fixtureAccountsChanged([
+      "0x2222222222222222222222222222222222222222",
+    ]);
+  });
+  await page.locator(".evm-connect button").click();
+  await expect(page.getByRole("region", { name: "Saved review" })).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.evaluate(() => {
     (window as any).fixtureAccountsChanged([]);
   });

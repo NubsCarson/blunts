@@ -181,3 +181,48 @@ whitespace checks passed. The fork-writer guard string is absent from built
 browser assets. Browser activity persistence and mainnet signing remain unfinished;
 the serializable journal was qualified with disposable test storage, not an owner
 browser restart or real wallet. The local preview remains on port 8745.
+
+
+## October 28 follow-up: saved reviews and reference guard
+
+The browser now persists a **review draft**, scoped to the exact wallet and
+chain 4663. Only version, owner, chain, direction, amount and review time are
+stored. There is no saved quote, signature, transaction hash, session or calldata
+to replay. After a reload, reconnect and open Wallet → Resume Fill/Spark review.
+This restores the amount and requires a fresh quote and fresh chain preflight.
+Changing wallets never displays another wallet's draft. Malformed, oversized or
+cross-wallet records are preserved and rejected rather than silently overwritten.
+Storage denial/failure is reported. This completes saved-review recovery, **not**
+production transaction activity/recovery or real-wallet signing.
+
+Both the public quote path and mainnet-read preflight now compare output to the
+issuer's directional bid/ask, applying its stock multiplier exactly once. Quotes
+more than **5% below** the computed reference are rejected before truncating the
+basis-point display, so rounding cannot admit a worse quote. This reference uses
+USDG's nominal $1 value; an independent USDG peg oracle was not added. The displayed
+shortfall includes pool costs and venue/reference differences. It is not a pure
+AMM price-impact metric, a best-execution guarantee or a broker-approved policy.
+Stale, future-dated, inactive, halted, inverted or malformed reference data is
+rejected. The 0.5% swap output floor remains a separate constraint.
+
+Provider timestamps are normalized to ISO milliseconds at the server boundary.
+The saved-review UI never treats an expired reference or quote as executable.
+The fork-only writer is still absent from the public bundle and cannot be enabled
+for mainnet through configuration. No signing or transfer was requested.
+
+Validation: build/typecheck and full backend suite **51 passed, one optional
+PostgreSQL skip**. Four new tests cover serialized restoration, storage denial and
+corruption, wallet isolation, multiplier math, exact 5% boundaries and invalid
+reference prices. The expanded browser check passed **3/3** engines after an actual
+page reload, restoration and account switch, while recording only connection/read
+wallet methods. Screenshots use disposable fixture balances. The real public
+read-only endpoint returned a valid 25-USDG quote with **7 bps** reference shortfall
+at the captured time, and malformed exponent input returned HTTP 400. Those are
+read results, not trade receipts. Private timestamped evidence is under
+`data/review-20261028/evm/reference-guard-*.json`.
+
+Remaining: mainnet execution/receipt policy, browser activity and uncertain-send
+recovery, ETH fee readiness, mobile external-wallet continuation, fee collection,
+the wallet-first adaptation of the five-step walkthrough, and an owner-approved
+real-wallet execution/settlement test. Existing provider/native/creative history
+remains preserved; native builds were not rerun for these browser changes.

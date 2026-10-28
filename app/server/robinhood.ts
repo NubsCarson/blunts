@@ -1,3 +1,4 @@
+import { referenceShortfall } from "../shared/reference-price.js";
 import {
   createPublicClient,
   http,
@@ -93,7 +94,7 @@ export async function market(): Promise<Market> {
       bid: price.bid,
       ask: price.ask,
       multiplier: asset.currentMultiplier,
-      generatedAt: price.generatedAt,
+      generatedAt: new Date(time).toISOString(),
       halted: price.isTradingHalt !== false,
       status: asset.status,
       transactionsEnabled: false,
@@ -161,7 +162,14 @@ export async function quote(
     throw Error(
       "No executable QQQ/USDG quote is available. Try a smaller amount.",
     );
+  const shortfall = referenceShortfall(
+    side,
+    formatUnits(amountIn, input.decimals),
+    formatUnits(best.amountOut, output.decimals),
+    m,
+  );
   return {
+    referenceShortfallBps: shortfall,
     side,
     amountIn: formatUnits(amountIn, input.decimals),
     amountOut: formatUnits(best.amountOut, output.decimals),

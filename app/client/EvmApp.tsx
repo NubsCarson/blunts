@@ -22,6 +22,12 @@ import {
 import "./evm.css";
 import { chainReader as reader } from "./chain";
 import { prepareSwap } from "./prepare-swap";
+import {
+  ReviewStore,
+  ReviewStorageError,
+  type SavedReview,
+} from "./review-store";
+import { ReferenceGapError } from "../shared/reference-price";
 import type { SwapPlan } from "../shared/swap-plan";
 type Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<any>;
@@ -50,6 +56,9 @@ export function EvmApp() {
     [amount, setAmount] = useState("25"),
     [quote, setQuote] = useState<SwapQuote | null>(null),
     [prepared, setPrepared] = useState<SwapPlan | null>(null),
+    [savedReview, setSavedReview] = useState<SavedReview | null>(null),
+    [reviewStorageError, setReviewStorageError] = useState(""),
+    [restoredReview, setRestoredReview] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [marketError, setMarketError] = useState(""),
@@ -240,21 +249,56 @@ export function EvmApp() {
           : "smooth",
       });
   }, [prepared]);
+  useEffect(() => {
+    setSavedReview(null);
+    setReviewStorageError("");
+    setRestoredReview(false);
+    if (!account || chain !== 4663) return;
+    try {
+      setSavedReview(new ReviewStore(window.localStorage).load(account));
+    } catch {
+      setReviewStorageError(
+        "Saved review is unavailable. Existing browser data was preserved.",
+      );
+    }
+  }, [account, chain]);
+  function resumeReview() {
+    if (
+      !account ||
+      chain !== 4663 ||
+      savedReview?.owner.toLowerCase() !== account.toLowerCase()
+    )
+      return;
+    setAmount(savedReview.amount);
+    setPanel(savedReview.side);
+    setRestoredReview(true);
+  }
   async function reviewSteps() {
-    if (!quote || !account || chain !== 4663) return;
+    if (!quote || !account || chain !== 4663 || !market) return;
     const version = quoteEpoch.current,
       identity = epoch.current;
     setBusy(true);
     setError("");
     setPrepared(null);
     try {
-      const plan = await prepareSwap(quote, account);
-      if (version === quoteEpoch.current && identity === epoch.current)
+      const plan = await prepareSwap(quote, account, reader, 4663, market);
+      if (version === quoteEpoch.current && identity === epoch.current) {
+        const saved = new ReviewStore(window.localStorage).save(
+          account,
+          quote.side,
+          quote.amountIn,
+        );
+        setSavedReview(saved);
+        setReviewStorageError("");
         setPrepared(plan);
-    } catch {
+      }
+    } catch (failure) {
       if (version === quoteEpoch.current && identity === epoch.current)
         setError(
-          "Wallet steps could not be verified. Check your balance and preview again.",
+          failure instanceof ReferenceGapError ||
+            failure instanceof ReviewStorageError
+            ? failure.message
+            : "Wallet steps could not be verified or saved. Check your balance and preview again.",
         );
     } finally {
       setBusy(false);
@@ -263,6 +307,7 @@ export function EvmApp() {
   async function preview() {
     if (panel !== "fill" && panel !== "spark") return;
     const version = ++quoteEpoch.current;
+    setRestoredReview(false);
     setBusy(true);
     setError("");
     setQuote(null);
@@ -426,6 +471,30 @@ export function EvmApp() {
                   >
                     View wallet <ArrowUpRight size={14} />
                   </a>
+                  {savedReview &&
+                    chain === 4663 &&
+                    savedReview.owner.toLowerCase() ===
+                      account.toLowerCase() && (
+                      <section className="evm-saved" aria-label="Saved review">
+                        <h2>Pick up your review.</h2>
+                        <p>
+                          {savedReview.side === "fill" ? "Fill" : "Spark"} ·{" "}
+                          {savedReview.amount}{" "}
+                          {savedReview.side === "fill" ? "USDG" : "QQQ"} · never
+                          submitted
+                        </p>
+                        <button onClick={resumeReview}>
+                          Resume{" "}
+                          {savedReview.side === "fill" ? "Fill" : "Spark"}{" "}
+                          review
+                        </button>
+                      </section>
+                    )}
+                  {reviewStorageError && (
+                    <p className="evm-error" role="status">
+                      {reviewStorageError}
+                    </p>
+                  )}
                   <button
                     onClick={() => {
                       epoch.current++;
@@ -499,6 +568,12 @@ export function EvmApp() {
               <p>
                 {panel === "fill" ? "USDG → QQQ token" : "QQQ token → USDG"}
               </p>
+              {restoredReview && (
+                <p className="evm-note" role="status">
+                  Saved amount restored. Preview again for a fresh price and
+                  wallet review.
+                </p>
+              )}
               <label className="evm-amount">
                 {panel === "fill" ? "USDG to spend" : "QQQ tokens to sell"}
                 <input
@@ -506,6 +581,7 @@ export function EvmApp() {
                   value={amount}
                   onChange={(e) => {
                     quoteEpoch.current++;
+                    setRestoredReview(false);
                     setAmount(e.target.value);
                     setQuote(null);
                   }}
@@ -534,6 +610,14 @@ export function EvmApp() {
                     Uniswap pool fee {quote.fee / 10000}% · No Blunts fee in
                     this preview
                   </p>
+                  {quote.referenceShortfallBps !== undefined && (
+                    <p>
+                      {quote.referenceShortfallBps === 0
+                        ? "At or above the reference output"
+                        : `${(quote.referenceShortfallBps / 100).toFixed(2)}% below reference output`}{" "}
+                      · includes pool costs
+                    </p>
+                  )}
                   <p>
                     {clock >= quote.expiresAt
                       ? "Quote expired. Preview again."
@@ -568,6 +652,9 @@ export function EvmApp() {
                           </li>
                         ))}
                       </ol>
+                      <p>
+                        Saved for this wallet. Reloading requires a fresh quote.
+                      </p>
                       <p>
                         Tokens return to your connected wallet. Network fees are
                         paid in ETH.

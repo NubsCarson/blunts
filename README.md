@@ -17,6 +17,9 @@ quotes and valuations. No simulated $500 balance is added to a connected wallet.
 No seed phrase, private key, wallet approval or signature is requested.
 **Review wallet steps** checks the live pool, balance and allowance before showing
 finite approval and deadline-protected swap calldata. It remains a read-only review.
+Reviewed direction/amount are saved for that wallet in this browser. After reload,
+reconnect, open Wallet and resume the review; a fresh quote is always required.
+Quotes more than 5% below the adjusted reference output are rejected.
 
 The quote path reads direct Uniswap pools. It does not submit swaps or withdraw
 dollars to a bank. Robinhood Stock Tokens carry issuer/jurisdiction restrictions,

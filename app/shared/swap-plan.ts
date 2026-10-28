@@ -28,6 +28,7 @@ const quoteSchema = z
     pool: address,
     blockNumber: z.string().regex(/^\d{1,20}$/),
     expiresAt: z.number().int().safe(),
+    referenceShortfallBps: z.number().int().min(0).max(500).optional(),
     transactionsEnabled: z.literal(false),
   })
   .strict();

@@ -1,4 +1,5 @@
-import { parseAbi, type Address } from "viem";
+import { referenceShortfall } from "../shared/reference-price";
+import { parseAbi, formatUnits, type Address } from "viem";
 import {
   stock,
   cash,
@@ -6,6 +7,7 @@ import {
   quoteAbi,
   tokenAbi,
   type SwapQuote,
+  type Market,
 } from "../shared/robinhood";
 import { approvalAbi, swapPlan } from "../shared/swap-plan";
 import { chainReader } from "./chain";
@@ -16,7 +18,12 @@ export async function prepareSwap(
   owner: Address,
   reader = chainReader,
   expectedChain = 4663,
+  reference?: Market,
 ) {
+  if (![4663, 31337].includes(expectedChain))
+    throw Error("Unsupported preparation chain.");
+  if (expectedChain === 4663 && !reference)
+    throw Error("A fresh reference is required.");
   if ((await reader.getChainId()) !== expectedChain)
     throw Error("Chain verification failed.");
   const input = quote.side === "fill" ? cash : stock,
@@ -75,5 +82,12 @@ export async function prepareSwap(
   });
   if (simulated.result[0] < plan.minimumOut)
     throw Error("Price moved beyond your limit. Preview again.");
+  if (reference)
+    referenceShortfall(
+      quote.side,
+      quote.amountIn,
+      formatUnits(simulated.result[0], output.decimals),
+      reference,
+    );
   return plan;
 }

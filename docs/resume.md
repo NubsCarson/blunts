@@ -23,6 +23,14 @@ No owner wallet or mainnet funds were used. Read `docs/evm-robinhood.md` for the
 exact receipts and remaining gates. The public app still never signs or sends;
 its fork-only test writer is not bundled. Anvil was stopped after qualification.
 
+Latest browser follow-up persists wallet-scoped review direction/amount only.
+Reload → reconnect → Wallet → Resume restores that amount, never an old quote
+or executable transaction. The quote and preparation paths reject outputs more
+than 5% below the multiplier-adjusted nominal-USDG reference. Full backend suite
+51 passed/one optional PostgreSQL skip; reload/isolation browser checks 3/3.
+The public endpoint was read-verified, and real signing remains disabled. See the
+latest section of `docs/evm-robinhood.md` for limitations and remaining work.
+
 The historical checkpoint below is preserved for recovery, not the active plan.
 
 ---

@@ -49,6 +49,7 @@ export type Market = {
   transactionsEnabled: false;
 };
 export type SwapQuote = {
+  referenceShortfallBps?: number;
   side: "fill" | "spark";
   amountIn: string;
   amountOut: string;
