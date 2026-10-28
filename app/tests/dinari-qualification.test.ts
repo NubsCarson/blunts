@@ -35,7 +35,7 @@ function fixture(stocks: unknown = { data: [stock()] }, type = "ORGANIZATION") {
       });
     assert.equal(url.pathname, "/api/v2/market_data/stocks/");
     assert.ok(url.search.includes("QQQ"));
-    assert.ok(url.search.includes("10"));
+    assert.equal(url.searchParams.get("limit"), "20");
     return Response.json(stocks);
   }) as typeof fetch;
   return { transport, requests };
@@ -66,6 +66,17 @@ test("official SDK uses only sandbox identity/instrument reads and never reports
   assert.equal(result.realMoneyEnabled, false);
   assert.equal(result.providerAcceptance, false);
   assert.ok(!JSON.stringify(result).includes("partner-id-never-printed"));
+  const sepolia = await qualifyDinariSandbox(
+    credentials,
+    fixture({
+      data: [stock({ tokens: [`eip155:11155111:0x${"1".repeat(40)}`] })],
+    }).transport,
+  );
+  assert.equal(sepolia.status, "sandbox_reads_verified");
+  assert.deepEqual(sepolia.instrument?.supportedTestChains, [
+    "eip155:11155111",
+  ]);
+  assert.equal(sepolia.instrument?.arbitrumSepoliaTokenPresent, false);
 });
 
 test("missing, duplicate, restricted and malformed instruments never qualify", async () => {

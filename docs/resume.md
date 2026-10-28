@@ -1,7 +1,70 @@
-# Paused local checkpoint — October 27, 2026
+# Local resume checkpoint — updated October 28, 2026
 
-The owner asked to stop and pick this up later. Keep the goal paused until they
-resume it. Everything is local; no push, PR, deployment, store submission, social
+## October 28 resumed work
+
+The owner resumed the task and approved creating a Dinari sandbox key and saving
+it with existing MoonPay fishtech test keys in
+`/Users/nubs/Git/blunts/data/provider-sandbox/credentials.json`. All five fields
+are present, mode 0600 and ignored by Git. Do not print or commit this file.
+The temporary transfer file is cleared. Both portals are signed in.
+
+One initial Dinari key was exposed in the one-time dialog's tool output. It was
+replaced immediately and the portal confirmed its revocation. Do not reuse it.
+The replacement was saved without printing its secret. MoonPay keys were
+verified against its visible test-key UI and concealed again.
+
+New explicit private-file loading supports the app, workbench and qualifier.
+Set `PROVIDER_SANDBOX_CREDENTIALS_FILE` to the absolute approved file path.
+Environment values override the file, including blank values. Production,
+unsafe file modes/ownership, symlinks, oversize data and unknown fields fail
+closed. Fixture browser tests explicitly disable private-file loading.
+
+Real qualification now passes: Dinari partner identity + QQQ reads and MoonPay
+indicative USD 100 quote, with receipt in
+`data/review-20261028/provider-qualification.json`. Dinari partner KYC is false.
+QQQ currently maps to Ethereum Sepolia and chain 179205, not Arbitrum Sepolia.
+Only Ethereum/Arbitrum Sepolia are allowed by this adapter, and preparation
+requires the requested chain's exact token mapping. No 179205 support was added.
+Dinari query limits were corrected to the documented minimum 20. MoonPay quote
+expiry is optional; a missing expiry returns an explicitly indicative estimate.
+
+Still unfinished: accepted customer/account/program/disclosures, narrow Steward
+permit signing, actual widget/callback/order execution, settlement and ledger
+reconciliation. No real transactions, deployment, push or shipping approval.
+
+The October 27 checkpoint below is historical; its signed-out/missing-key
+blocker is superseded by the above. Preserve all its existing data and receipts.
+
+Validation after these changes: build and full backend suite passed (42 tests,
+one optional PostgreSQL skip), including actual isolated local Steward auth.
+The 20 provider/qualification/private-file cases pass. Formatting and diff
+checks pass. Provider qualification exits 0 with the approved private-file path;
+workbench status opens and closes the existing journal successfully. Browser
+acceptance passed in desktop Chromium, mobile Chromium and WebKit (3/3), using
+isolated Steward and synthetic provider keys. The Cloud preview now runs on
+`http://localhost:8745` with sandbox routes and private-file loading enabled;
+its tray remains simulated. Local test Steward runs on port 8743. Stop both
+gracefully before another process opens their embedded databases. The provider
+journal is held by the preview, so stop it before running the workbench CLI.
+
+Restart the current preview with:
+
+```sh
+AUTH_PROVIDER=eliza-cloud PROVIDER_SANDBOX=1 \
+PROVIDER_SANDBOX_CREDENTIALS_FILE=/Users/nubs/Git/blunts/data/provider-sandbox/credentials.json \
+PORT=8745 APP_ORIGIN=http://localhost:8745 DATABASE_URL=data/blunts-cloud npm start
+```
+
+No owner action is needed for the saved-key/read-only setup. Real execution
+still needs provider customer/program eligibility and an approved scoped signing
+flow; do not enter business/KYC facts, accept agreements or open a real financial
+account on the owner's behalf by inference. No funding compatibility or actual
+financial-cycle acceptance has been claimed.
+
+## October 27 historical checkpoint
+
+The owner previously asked to stop and pick this up later, then resumed on
+October 28. Everything is local; no push, PR, deployment, store submission, social
 post, paid provider plan or real-money action was performed.
 
 ## Start here

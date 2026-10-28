@@ -1,20 +1,24 @@
 # Local Dinari and MoonPay integration workbench
 
 This is a sandbox integration surface, separate from the tray's simulated money
-and its ledger. It is off by default. No provider credentials have been supplied
-or qualified for this project, and no external order, checkout or payout has
-been executed. The local contracts and recovery paths can be tested unattended.
+and its ledger. It is off by default. On October 28, genuine sandbox credentials
+passed Dinari identity/QQQ reads and a MoonPay indicative buy-quote read. No
+external order, checkout or payout has been executed. The local contracts and
+recovery paths can be tested unattended.
 
 ## Implemented boundaries
 
 | Provider | Implemented | Remaining acceptance |
 | --- | --- | --- |
-| MoonPay | USD/USDC buy quote with exact fee/expiry checks; test-key-only signed buy/sell URLs; transaction lookup by saved external ID; customer/wallet/amount/currency matching; raw-body V2 webhook verification and event deduplication | Enabled partner test keys, actual quote/widget/transaction/callback acceptance, approved funding/payout route and chain reconciliation |
+| MoonPay | USD/USDC indicative buy quote with exact fee checks and expiry validation when supplied; test-key-only signed buy/sell URLs; transaction lookup by saved external ID; customer/wallet/amount/currency matching; raw-body V2 webhook verification and event deduplication | Actual widget/transaction/callback acceptance, approved funding/payout route and chain reconciliation |
 | Dinari | Official SDK with sandbox origin pinned; account/customer reference/KYC/wallet/instrument checks; external-wallet unsigned permit preparation; request recovery by client ID; order status lookup | Enabled customer/account/program, accepted payment token/network, approved signing and submission, actual fills and chain settlement |
 | Recovery | Immutable instructions committed before I/O; one prepare claim; unknown results retained across restarts; no repeated POST after uncertainty; read-only reconciliation; separate event inbox | Provider and chain acceptance, distributed deployment and operational controls |
 
 The public MoonPay ERC-20 sandbox delivers MoonPayToken on Sepolia. The Dinari
-permit path here targets Arbitrum Sepolia. These are separate test legs. They
+permit path allows Ethereum Sepolia and Arbitrum Sepolia only when QQQ's returned
+token mapping includes the requested chain. The October 28 real sandbox response
+listed Ethereum Sepolia and Dinari's test chain 179205, with no Arbitrum Sepolia
+mapping; chain 179205 is not enabled by this adapter. These are separate test legs. They
 are not presented as one native-USDC funding/investment route. `FILLED`, widget
 completion and webhook delivery do not credit the Blunts ledger.
 
@@ -35,8 +39,17 @@ is local source evidence, not a claim about the deployed Cloud configuration.
 
 ## Local configuration
 
-Credentials are read from process environment only. The app does not load the
-creative-tools `.env`. Never paste secrets into chat, command arguments or Git.
+Credentials come from process environment or an explicitly selected private
+JSON file. The app does not load the creative-tools `.env`. Never paste secrets
+into chat, command arguments or Git.
+
+The approved local file is `data/provider-sandbox/credentials.json`, Git-ignored
+and mode 0600. Set `PROVIDER_SANDBOX_CREDENTIALS_FILE` to its absolute path to
+opt in. Loading refuses production, symlinks, non-files, wrong ownership, modes
+other than 0600, files over 16 KiB, unknown fields and live MoonPay keys. Explicit
+environment values, including empty strings, override the file. Browser tests
+disable this path and supply synthetic keys so genuine credentials cannot leak
+into fixture tests. The temporary UI transfer file was cleared after capture.
 
 | Variable | Purpose |
 | --- | --- |
@@ -47,6 +60,7 @@ creative-tools `.env`. Never paste secrets into chat, command arguments or Git.
 | `MOONPAY_WEBHOOK_KEY` | Distinct webhook authentication key |
 | `DINARI_SANDBOX_BINDINGS_FILE` | Optional private JSON array of approved test customer/account/wallet bindings |
 | `PROVIDER_SANDBOX=1` | Opt in to HTTP workbench routes |
+| `PROVIDER_SANDBOX_CREDENTIALS_FILE` | Optional private JSON containing only the five credential variables above |
 
 HTTP activation requires a loopback HTTP origin and bind host, and refuses
 `NODE_ENV=production`. `MONEY_MODE=live` still refuses startup. Invalid live
@@ -55,7 +69,7 @@ pinned to the sandbox. No network request is made by adapter construction.
 
 Each Dinari binding contains `customerId` (the Blunts database user UUID),
 `entityId`, `accountId`, `stockId`, `wallet`, `paymentToken` and
-`chainId: "eip155:421614"`. The provider entity's `reference_id` must match the
+`chainId` (`eip155:11155111` or `eip155:421614`). The provider entity's `reference_id` must match the
 Blunts user UUID. The current verified Steward wallet must match the binding,
 and Dinari must report it as external and not AML flagged. Account/entity IDs
 cannot be supplied by a browser request. An operator must establish accepted
@@ -73,6 +87,16 @@ makes at most two GETs; MoonPay makes one USD 100 sandbox buy-quote GET. Exit 2
 means qualification is incomplete. MoonPay quote access does not verify the
 secret/publishable key pair, webhook key or widget acceptance; the result says
 so. Neither qualification reports provider approval or real-money readiness.
+
+The October 28 read receipt is `data/review-20261028/provider-qualification.json`.
+Dinari reported `sandbox_reads_verified`, QQQ tradable/fractional on Ethereum
+Sepolia, and `partnerKycComplete=false`. MoonPay reported
+`sandbox_quote_verified` and `secretKeyPairVerified=false`. Quotes without an
+upstream expiry return `expiresAt=null`, `indicative=true` and a local receive
+timestamp; no expiry or locked price is invented. Dinari stock queries now use
+the [provider's documented minimum](https://docs.dinari.com/reference/getstocks)
+`limit=20`; request recovery also uses 20
+while continuing to reject more than one match for the saved client order ID.
 
 ## Authenticated HTTP workbench
 

@@ -18,7 +18,7 @@ const stocksSchema = z.object({
         tokens: z.array(z.string()),
       }),
     )
-    .max(10),
+    .max(20),
 });
 
 export type DinariQualification = {
@@ -42,6 +42,7 @@ export type DinariQualification = {
     tradable: boolean;
     fractionable: boolean;
     arbitrumSepoliaTokenPresent: boolean;
+    supportedTestChains: string[];
   };
 };
 
@@ -79,7 +80,7 @@ export async function qualifyDinariSandbox(
       partnerKycComplete: entity.data.is_kyc_complete,
     };
     const response = stocksSchema.safeParse(
-      await client.v2.marketData.stocks.list({ symbols: ["QQQ"], limit: 10 }),
+      await client.v2.marketData.stocks.list({ symbols: ["QQQ"], limit: 20 }),
     );
     if (!response.success) return { ...partner, status: "invalid_response" };
     const matches = response.data.data.filter(
@@ -96,6 +97,12 @@ export async function qualifyDinariSandbox(
       arbitrumSepoliaTokenPresent: stock.tokens.some((token) =>
         /^eip155:421614:0x[0-9a-fA-F]{40}$/.test(token),
       ),
+      supportedTestChains: ["eip155:11155111", "eip155:421614"].filter(
+        (chain) =>
+          stock.tokens.some((token) =>
+            new RegExp(`^${chain}:0x[0-9a-fA-F]{40}$`).test(token),
+          ),
+      ),
     };
     return {
       ...partner,
@@ -103,7 +110,7 @@ export async function qualifyDinariSandbox(
       status:
         instrument.tradable &&
         instrument.fractionable &&
-        instrument.arbitrumSepoliaTokenPresent
+        instrument.supportedTestChains.length > 0
           ? "sandbox_reads_verified"
           : "instrument_restricted",
     };

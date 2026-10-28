@@ -262,9 +262,11 @@ unknown commands instead of repeating a possibly accepted POST.
 
 `npm run providers:check` reports both providers: Dinari partner/QQQ reads and a
 MoonPay test buy-quote read. Without the required keys it makes no network calls
-and exits 2. Keys are process environment only; see the workbench guide for the
-five variable names and private customer-binding file. No genuine provider keys
-have been supplied or qualified. Signed order submission, accepted customer
+and exits 2. Keys come from process environment or an explicitly selected
+`PROVIDER_SANDBOX_CREDENTIALS_FILE`; see the workbench guide for its private-file
+requirements, five variable names and customer-binding file. On October 28,
+genuine sandbox keys passed Dinari partner/QQQ reads and a MoonPay indicative
+quote. This does not establish key-pair/webhook/transaction acceptance. Signed order submission, accepted customer
 onboarding/signing, actual funding/payout and chain/ledger settlement remain
 unfinished. The inspected Steward source explicitly rejects permit-style
 signing; a scoped accepted signing path must be implemented, not enabled through

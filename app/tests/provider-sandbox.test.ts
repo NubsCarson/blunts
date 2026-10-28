@@ -100,6 +100,11 @@ test("MoonPay quote qualification makes zero requests without keys and validates
   assert.equal(calls, 1);
   const adapter = new MoonPaySandbox(keys, transport);
   assert.equal((await adapter.quote("100")).quotedCrypto, "99.123456");
+  changes = { expiresAt: undefined };
+  const indicative = await adapter.quote("100");
+  assert.equal(indicative.expiresAt, null);
+  assert.equal(indicative.indicative, true);
+  assert.ok(Number.isFinite(Date.parse(indicative.receivedAt)));
   for (const value of [
     { totalAmount: 102 },
     { expiresAt: new Date(0).toISOString() },
@@ -330,7 +335,12 @@ test("MoonPay webhook authentication uses exact raw bytes, rejects stale and alt
 
 function dinariFixture(
   input: DinariInstruction,
-  changes: { entity?: object; wallet?: object; account?: object } = {},
+  changes: {
+    entity?: object;
+    wallet?: object;
+    account?: object;
+    stock?: object;
+  } = {},
 ) {
   const calls: { path: string; method: string; body: any }[] = [];
   const requestId = randomUUID();
@@ -378,7 +388,8 @@ function dinariFixture(
             symbol: "QQQ",
             is_tradable: true,
             is_fractionable: true,
-            tokens: [`eip155:421614:${wallet}`],
+            tokens: [`${input.chainId}:${wallet}`],
+            ...changes.stock,
           },
         ],
       });
@@ -388,38 +399,40 @@ function dinariFixture(
     );
     return Response.json({
       order_request_id: requestId,
-      permit: { domain: { chainId: 421614 } },
+      permit: { domain: { chainId: Number(input.chainId.split(":")[1]) } },
     });
   }) as typeof fetch;
   return { calls, transport, requestId };
 }
 
 test("Dinari uses the external-wallet unsigned permit path after checking customer/account/wallet and QQQ", async () => {
-  for (const side of ["BUY", "SELL"] as const) {
-    const input = { ...dinari(), side };
-    const fixture = dinariFixture(input);
-    const adapter = new DinariSandbox(
-      { keyId: "synthetic", secretKey: "synthetic" },
-      fixture.transport,
-    );
-    const result = await adapter.prepare(input);
-    assert.equal(result.signingApproved, false);
-    assert.equal(result.settled, false);
-    assert.equal(result.requestId, fixture.requestId);
-    const posts = fixture.calls.filter((x) => x.method === "POST");
-    assert.equal(posts.length, 1);
-    assert.equal(posts[0].body.client_order_id, input.id);
-    assert.equal(
-      posts[0].body[
-        side === "BUY" ? "payment_token_quantity" : "asset_token_quantity"
-      ],
-      100.123456,
-    );
-    assert.ok(
-      !fixture.calls.some((x) =>
-        /market_buy|market_sell|permit_transaction$/.test(x.path),
-      ),
-    );
+  for (const chainId of ["eip155:11155111", "eip155:421614"] as const) {
+    for (const side of ["BUY", "SELL"] as const) {
+      const input = { ...dinari(), side, chainId };
+      const fixture = dinariFixture(input);
+      const adapter = new DinariSandbox(
+        { keyId: "synthetic", secretKey: "synthetic" },
+        fixture.transport,
+      );
+      const result = await adapter.prepare(input);
+      assert.equal(result.signingApproved, false);
+      assert.equal(result.settled, false);
+      assert.equal(result.requestId, fixture.requestId);
+      const posts = fixture.calls.filter((x) => x.method === "POST");
+      assert.equal(posts.length, 1);
+      assert.equal(posts[0].body.client_order_id, input.id);
+      assert.equal(
+        posts[0].body[
+          side === "BUY" ? "payment_token_quantity" : "asset_token_quantity"
+        ],
+        100.123456,
+      );
+      assert.ok(
+        !fixture.calls.some((x) =>
+          /market_buy|market_sell|permit_transaction$/.test(x.path),
+        ),
+      );
+    }
   }
 });
 
@@ -433,6 +446,8 @@ test("Dinari refuses unverified/mismapped customers, inactive accounts and manag
     { wallet: { is_managed_wallet: true } },
     { wallet: { is_aml_flagged: true } },
     { wallet: { address: `0x${"4".repeat(40)}` } },
+    { stock: { tokens: [`eip155:1:${wallet}`] } },
+    { stock: { tokens: [`eip155:11155111:${wallet}`] } },
   ]) {
     const fixture = dinariFixture(input, changes);
     await assert.rejects(

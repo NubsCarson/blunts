@@ -4,23 +4,26 @@ import { SandboxStore, sandboxCommand } from "./provider-sandbox-store.js";
 import { DinariSandbox } from "./dinari-sandbox.js";
 import { MoonPaySandbox, moonpaySandboxConfig } from "./moonpay-sandbox.js";
 import { ProviderFault } from "./provider-transport.js";
+import { providerCredentials } from "./provider-credentials.js";
 
 const [action, argument, signatureFile] = process.argv.slice(2);
 let journal: Awaited<ReturnType<typeof openSandboxDatabase>> | undefined;
+let env: NodeJS.ProcessEnv = {};
 const dinari = () =>
   new DinariSandbox({
-    keyId: process.env.DINARI_API_KEY_ID,
-    secretKey: process.env.DINARI_API_SECRET_KEY,
+    keyId: env.DINARI_API_KEY_ID,
+    secretKey: env.DINARI_API_SECRET_KEY,
   });
 const moonpay = () =>
   new MoonPaySandbox({
-    publishableKey: process.env.MOONPAY_PUBLISHABLE_KEY ?? "",
-    secretKey: process.env.MOONPAY_SECRET_KEY ?? "",
-    webhookKey: process.env.MOONPAY_WEBHOOK_KEY,
+    publishableKey: env.MOONPAY_PUBLISHABLE_KEY ?? "",
+    secretKey: env.MOONPAY_SECRET_KEY ?? "",
+    webhookKey: env.MOONPAY_WEBHOOK_KEY,
   });
 try {
   if (process.env.NODE_ENV === "production")
     throw new ProviderFault("configuration");
+  env = await providerCredentials();
   journal = await openSandboxDatabase();
   const { root, db } = journal;
   const store = new SandboxStore(db);
@@ -87,11 +90,9 @@ try {
   } else if (action === "status") {
     console.log(
       JSON.stringify({
-        moonpay: moonpaySandboxConfig(),
+        moonpay: moonpaySandboxConfig(env),
         dinari: {
-          configured:
-            !!process.env.DINARI_API_KEY_ID &&
-            !!process.env.DINARI_API_SECRET_KEY,
+          configured: !!env.DINARI_API_KEY_ID && !!env.DINARI_API_SECRET_KEY,
           providerAcceptance: false,
         },
         commands: await db.query(

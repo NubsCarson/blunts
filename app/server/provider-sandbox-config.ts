@@ -8,6 +8,7 @@ import {
   type ProviderSandboxOptions,
 } from "./provider-sandbox-api.js";
 import { ProviderFault } from "./provider-transport.js";
+import { providerCredentials } from "./provider-credentials.js";
 
 export async function openProviderSandbox(
   origin: string,
@@ -32,7 +33,7 @@ export async function openProviderSandbox(
   const { db } = journal;
   try {
     const options: ProviderSandboxOptions = { store: new SandboxStore(db) };
-    const env = process.env;
+    const env = await providerCredentials();
     if (env.MOONPAY_PUBLISHABLE_KEY && env.MOONPAY_SECRET_KEY)
       options.moonpay = new MoonPaySandbox({
         publishableKey: env.MOONPAY_PUBLISHABLE_KEY,

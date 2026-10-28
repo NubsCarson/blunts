@@ -107,7 +107,9 @@ export class MoonPaySandbox {
           extraFeeAmount: finite,
           networkFeeAmount: finite,
           totalAmount: finite,
-          expiresAt: z.string().datetime(),
+          // The public buy-quote API can omit expiry. Such a response is an
+          // estimate, never a locked execution price or permission to pay.
+          expiresAt: z.string().datetime().optional(),
         })
         .safeParse(await response.json());
       if (!parsed.success) throw new ProviderFault("invalid_response");
@@ -123,7 +125,8 @@ export class MoonPaySandbox {
           base !== atomic(amount, 2) ||
           total !== base + fee + extra + network ||
           crypto <= 0n ||
-          Date.parse(quote.expiresAt) <= Date.now()
+          (quote.expiresAt !== undefined &&
+            Date.parse(quote.expiresAt) <= Date.now())
         )
           throw new ProviderFault("mismatch");
         return {
@@ -135,7 +138,9 @@ export class MoonPaySandbox {
           extraFee: decimal(extra, 2),
           networkFee: decimal(network, 2),
           quotedCrypto: decimal(crypto),
-          expiresAt: quote.expiresAt,
+          expiresAt: quote.expiresAt ?? null,
+          receivedAt: new Date().toISOString(),
+          indicative: true as const,
           deliveryAsset: "MoonPayToken on Sepolia" as const,
           settled: false as const,
         };

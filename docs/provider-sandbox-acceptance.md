@@ -1,4 +1,27 @@
-# Provider sandbox acceptance — October 27, 2026
+# Provider sandbox acceptance — updated October 28, 2026
+
+## Current receipt
+
+Both developer dashboards are authenticated. The owner approved saving sandbox
+credentials locally in `data/provider-sandbox/credentials.json` (0600, ignored
+by Git). A Dinari key accidentally exposed by its one-time dialog was replaced;
+the portal confirmed successful revocation of the exposed key. Only its
+replacement remains usable. MoonPay's existing fishtech test keys were copied
+and verified through its normal visible key controls, then hidden again.
+
+Genuine read-only qualification now passes for both providers. Dinari's partner
+identity read succeeds and QQQ is tradable/fractional on Ethereum Sepolia;
+partner KYC is incomplete. MoonPay's USD 100 indicative quote succeeds, with
+no assertion that its secret/public pair, webhook or transaction flow has been
+accepted. No customer financial account, order, payment, signing, public tunnel,
+provider callback registration or live key was created. See
+[the workbench](provider-sandbox-workbench.md) for configuration and limits.
+
+The October 27 access/setup notes below are historical. They do not override
+this current receipt. The earlier Arbitrum Sepolia assumption was corrected
+against actual sandbox metadata and the provider's
+[order examples](https://docs.dinari.com/docs/placing-orders). Two test assets
+sharing Sepolia still does not establish compatible funding or settlement.
 
 Dinari and MoonPay remain the engineering candidates already named in Shaw's
 repository. They are not enabled Blunts integrations. Keep Cloud/Steward for

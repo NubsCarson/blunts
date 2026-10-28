@@ -29,7 +29,7 @@ export const dinariInstruction = z
           return false;
         }
       }, "Choose a positive amount with at most six decimals, up to 1,000,000."),
-    chainId: z.literal("eip155:421614"),
+    chainId: z.enum(["eip155:11155111", "eip155:421614"]),
   })
   .strict();
 export type DinariInstruction = z.infer<typeof dinariInstruction>;
@@ -102,7 +102,7 @@ export class DinariSandbox {
         throw new ProviderFault("mismatch");
       const stocks = await this.client.v2.marketData.stocks.list({
         symbols: ["QQQ"],
-        limit: 10,
+        limit: 20,
       });
       if (!Array.isArray(stocks.data) || stocks.data.length !== 1)
         throw new ProviderFault("invalid_response");
@@ -113,7 +113,7 @@ export class DinariSandbox {
         stock.is_tradable !== true ||
         stock.is_fractionable !== true ||
         !stock.tokens?.some((token) =>
-          /^eip155:421614:0x[0-9a-fA-F]{40}$/.test(token),
+          new RegExp(`^${value.chainId}:0x[0-9a-fA-F]{40}$`).test(token),
         )
       )
         throw new ProviderFault("mismatch");
@@ -155,7 +155,7 @@ export class DinariSandbox {
     return providerCall(async () => {
       const result = await this.client.v2.accounts.orderRequests.list(
         input.accountId,
-        { client_order_id: input.id, limit: 2 },
+        { client_order_id: input.id, limit: 20 },
       );
       if (!Array.isArray(result.data) || result.data.length > 1)
         throw new ProviderFault("ambiguous");

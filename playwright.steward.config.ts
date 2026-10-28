@@ -38,6 +38,7 @@ export default defineConfig({
       HOST: "127.0.0.1",
       MONEY_MODE: "simulation",
       PROVIDER_SANDBOX: "1",
+      PROVIDER_SANDBOX_CREDENTIALS_FILE: "",
       MOONPAY_PUBLISHABLE_KEY: localProviderKeys.publishableKey,
       MOONPAY_SECRET_KEY: localProviderKeys.secretKey,
       MOONPAY_WEBHOOK_KEY: localProviderKeys.webhookKey,
