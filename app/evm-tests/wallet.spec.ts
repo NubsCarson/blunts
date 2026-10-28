@@ -175,7 +175,9 @@ test("wallet-first preview connects without signup, reads balances and never sen
     }),
   );
   await page.goto("/");
-  await expect(page.getByText("Local preview · swaps off")).toBeVisible();
+  await expect(
+    page.getByText("Local signing · approve in wallet"),
+  ).toBeVisible();
   await expect(page.getByLabel("Email", { exact: true })).toHaveCount(0);
   await page
     .getByRole("button", { name: "Connect wallet", exact: true })
@@ -192,7 +194,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
   await expect(page.getByText("0.035 QQQ", { exact: true })).toBeVisible();
   await expect(
     page.getByText(
-      "Local preview: wallet approvals and swaps are disabled. No funds will move.",
+      "Local wallet signing is enabled. Approval or swap requests can move real funds only after you approve in your wallet.",
     ),
   ).toBeVisible();
   await page
@@ -205,7 +207,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
     page.getByText("Approve only 25 USDG", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Review only. Signing stays disabled in this local build.", {
+    page.getByText("Review each request in your wallet before approving.", {
       exact: true,
     }),
   ).toBeVisible();
@@ -483,7 +485,7 @@ test("wallet walkthrough explains the actual route and keeps preview-only bounda
     walkthrough.getByText(/does not withdraw dollars to a bank/),
   ).toBeVisible();
   await expect(
-    walkthrough.getByText("Local preview · signing and swaps disabled", {
+    walkthrough.getByText("Local signing · approve each wallet request", {
       exact: true,
     }),
   ).toBeVisible();

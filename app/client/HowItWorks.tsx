@@ -89,14 +89,22 @@ const walletLessons = [
 export function HowItWorks({
   onDone,
   mode = "demo",
+  signingEnabled = false,
 }: {
   onDone: () => void;
   mode?: "demo" | "wallet";
+  signingEnabled?: boolean;
 }) {
   const lessons = mode === "wallet" ? walletLessons : demoLessons;
   const [step, setStep] = useState(0);
   const start = useRef<{ x: number; y: number } | null>(null);
-  const lesson = lessons[step];
+  const lesson =
+    mode === "wallet" && signingEnabled && step === 4
+      ? {
+          ...lessons[step],
+          body: "Spark sells QQQ tokens back into USDG in the same wallet. It does not withdraw dollars to a bank. In this approved local build, choose each step and review its real-funds request in your wallet. Declining does not start the next step.",
+        }
+      : lessons[step];
   function move(delta: number) {
     setStep((current) =>
       Math.max(0, Math.min(lessons.length - 1, current + delta)),
@@ -210,7 +218,9 @@ export function HowItWorks({
       </div>
       <small>
         {mode === "wallet"
-          ? "Local preview · signing and swaps disabled"
+          ? signingEnabled
+            ? "Local signing · approve each wallet request"
+            : "Local preview · signing and swaps disabled"
           : "Demo only · no real money or investments"}
       </small>
     </div>

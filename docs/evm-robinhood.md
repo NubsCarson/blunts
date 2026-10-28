@@ -1,5 +1,11 @@
 # Wallet-first Blunts — local implementation
 
+**Current owner-approved scope:** local HTTP loopback web signing is enabled as
+recorded in the latest section. Hosted/native origins remain disabled and shipping
+still requires later approval. Earlier disabled-signing/bundle claims below are
+historical checkpoints, superseded only for the approved local web origin.
+
+
 The owner's October 28 direction replaces the provider-first app with a normal
 EVM wallet and Robinhood Chain stock tokens. The previous implementation is
 preserved at `e89c958` on `codex/local-review-20261027`. Existing data and secrets
@@ -595,3 +601,74 @@ The own-app console and checksum receipt are private under
 created simulator was shut down after verification. Its data remains available
 for resuming; no unrelated simulator or personal-device state was changed.
 Loopback preview remains available and real signing remains disabled.
+
+
+## Owner-approved local signing controls
+
+The owner explicitly approved signing on October 28 while retaining the instruction
+to keep everything local and obtain a later approval before public shipping. That
+is authorization to implement/activate the local wallet request flow, not evidence
+that any holder is eligible, that a real transaction was signed, or that the agent
+may approve a personal financial transaction. No personal wallet or private key
+was used during this change.
+
+`executionPolicyForOrigin` enables signing only for HTTP `localhost`/`127.0.0.1`
+web origins. Hosted HTTPS, Capacitor/native, missing and malformed origins stay
+disabled. No URL parameter, localStorage preference or environment flag expands
+that policy. The loopback server remains bound to 127.0.0.1. The API now reports
+local execution availability in health/market/quote responses; the UI additionally
+checks its own origin and the quote's availability flag. The signing adapter is
+now lazily bundled, as required for the owner-approved local flow, rather than
+absent from the bundle. Its execution policy still rejects hosted/native usage.
+
+Prepared steps show a separate **Wallet signing** region with explicit real-funds
+language and an unchecked issuer-eligibility/non-US-person acknowledgement. This
+self-attestation is a UI prerequisite, not a substitute for the issuer's actual
+restrictions, provider acceptance or legal/commercial review. The agent must not
+check it or operate a real wallet on the user's behalf. Token terms remain linked.
+
+Every reset, finite approval and swap is a separately chosen wallet request.
+Declining (EIP-1193 code 4001) records cancellation without requesting a next step.
+After sending, the holder must check the receipt; no next approval or swap is
+started automatically. Receipt inclusion unlocks a later explicitly chosen step,
+not an Ethereum-finality claim. If the quote expires during wallet interaction,
+a fresh quote/review is required. Already-granted finite allowances can then be
+rechecked and reused without repeating the earlier approval. Unknown/pending/
+reorged/mismatched records block new requests, including after a fresh quote.
+
+The composed adapter re-reads market reference, pool, allowance, balances and
+minimum output, checks current ETH readiness, takes the wallet's exclusive Web
+Lock, verifies account/network again after asynchronous work, reconstructs every
+calldata byte, and persists before asking the wallet. No unlimited approval,
+automatic funds transfer, key export, bank withdrawal or new Blunts fee was added.
+The original proposed 1% Blunts fee is still unimplemented on this swap route and
+must not be represented as collected or commercially approved.
+
+Three new browser scenarios per engine use an in-memory wallet and fully
+intercepted RPC/transaction fixtures: (1) approval and swap are separate explicit
+requests with pinned chain/from/finite amount, (2) declining retains cancellation
+without a next request, and (3) a simulated lost response retains unknown state
+and blocks a repeat after a new quote. The fixture's virtual send endpoint is
+intercepted before the actual local server; it is not an enabled application API
+and sends no public-chain transactions. Existing local-fork contract execution
+receipts remain separate evidence. No personal or mainnet trade is claimed.
+
+Remaining: actual eligible-holder wallet confirmation/receipt and finality proof,
+physical mobile connection, native signing integration, replacement/cancellation
+transaction recovery, fee/business-policy acceptance and explicit public-release
+approval. The app is not yet proven complete or production-ready.
+
+Local-signing final verification: **66 backend tests passed, two optional
+integrations skipped**, and **21 browser cases passed** across Chromium, mobile
+Chromium and WebKit. Signing, cancellation and lost-response UI cases use only
+disposable intercepted wallet/RPC fixtures. Final build/typecheck, formatting,
+whitespace and UI detector passed. The signing-screen screenshot is explicitly
+fixture evidence, not a personal wallet or real trade receipt.
+
+The actual localhost server was restarted and `/api/health` returned HTTP 200
+with `transactionsEnabled=true`, reflecting the owner's new local approval. No
+wallet was connected by the agent. Browser-control refresh then failed because
+the control bridge reported `browser.user` unavailable; no claim is made that
+the owner's already-open tab was refreshed. Opening/reloading localhost loads
+the new controls. Publishing, hosted/native activation and agent-performed trades
+remain unapproved. Earlier read-only native artifacts are preserved unchanged.

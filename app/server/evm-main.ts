@@ -1,3 +1,4 @@
+import { executionPolicyForOrigin } from "../shared/execution-policy.js";
 import { evmRateLimit } from "./evm-rate-limit.js";
 import { ReferenceGapError } from "../shared/reference-price.js";
 import { amountUnits } from "../shared/robinhood.js";
@@ -8,6 +9,8 @@ import serveStatic from "@fastify/static";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { market, quote } from "./robinhood.js";
+const port = Number(process.env.PORT ?? 8745);
+const execution = executionPolicyForOrigin(`http://localhost:${port}`);
 const app = Fastify({
   logger: {
     redact: ["req.headers.cookie", "req.headers.authorization", "req.body"],
@@ -35,11 +38,11 @@ await app.register(rateLimit, evmRateLimit);
 app.get("/api/health", async () => ({
   ok: true,
   mode: "evm-preview",
-  transactionsEnabled: false,
+  transactionsEnabled: execution.enabled,
 }));
 app.get("/api/onchain/market", async (_, reply) => {
   try {
-    return await market();
+    return { ...(await market()), transactionsEnabled: execution.enabled };
   } catch {
     return reply
       .code(503)
@@ -63,7 +66,10 @@ app.get("/api/onchain/quote", async (req, reply) => {
       .send({ error: "Enter a positive amount with supported precision." });
   }
   try {
-    return await quote(input.data.side, input.data.amount);
+    return {
+      ...(await quote(input.data.side, input.data.amount)),
+      transactionsEnabled: execution.enabled,
+    };
   } catch (error) {
     if (error instanceof ReferenceGapError)
       return reply.code(409).send({ error: error.message });
@@ -79,6 +85,6 @@ app.setNotFoundHandler((req, reply) =>
     ? reply.code(404).send({ error: "Not found" })
     : reply.sendFile("index.html"),
 );
-await app.listen({ host: "127.0.0.1", port: Number(process.env.PORT ?? 8745) });
+await app.listen({ host: "127.0.0.1", port });
 process.once("SIGTERM", () => void app.close());
 process.once("SIGINT", () => void app.close());

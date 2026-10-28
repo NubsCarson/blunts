@@ -1,3 +1,5 @@
+import { executionPolicyForOrigin } from "../shared/execution-policy";
+import { WalletSigning } from "./WalletSigning";
 import { useEffect, useRef, useState } from "react";
 import { formatUnits, type Address } from "viem";
 import {
@@ -396,6 +398,9 @@ export function EvmApp() {
       ? import.meta.env.VITE_PUBLIC_APP_ORIGIN
       : window.location.origin,
   );
+  const signingEnabled = executionPolicyForOrigin(
+    window.location.origin,
+  ).enabled;
   const rolled = (value ?? 0n) / 10000n;
   const short = account
     ? `${account.slice(0, 6)}…${account.slice(-4)}`
@@ -419,7 +424,11 @@ export function EvmApp() {
         <Tray value={String(value ?? 0n)} paused={panel !== null} />
         <div className="evm-network">
           <span>Robinhood Chain</span>
-          <span>Local preview · swaps off</span>
+          <span>
+            {signingEnabled
+              ? "Local signing · approve in wallet"
+              : "Preview · signing disabled"}
+          </span>
         </div>
         <div className="scene-hud">
           <strong className="scene-value">
@@ -632,8 +641,9 @@ export function EvmApp() {
               </p>
               <p>
                 This local version reads real market data and previews swaps. It
-                does not submit transactions, charge a Blunts fee, move money or
-                withdraw to a bank.
+                only requests a transaction after you choose a step and approve
+                in your wallet. No Blunts fee is charged and bank withdrawals
+                are not connected.
               </p>
               <p>
                 QQQ tokens provide economic exposure; they are not direct
@@ -649,7 +659,11 @@ export function EvmApp() {
               </a>
             </>
           ) : panel === "how" ? (
-            <HowItWorks mode="wallet" onDone={() => setPanel("menu")} />
+            <HowItWorks
+              mode="wallet"
+              signingEnabled={signingEnabled}
+              onDone={() => setPanel("menu")}
+            />
           ) : (
             <>
               <h1>
@@ -779,15 +793,29 @@ export function EvmApp() {
                       <p>
                         {clock >= quote.expiresAt
                           ? "This plan expired. Preview again."
-                          : "Review only. Signing stays disabled in this local build."}
+                          : signingEnabled
+                            ? "Review each request in your wallet before approving."
+                            : "Review only. Signing stays disabled in this local build."}
                       </p>
+                      {provider && (
+                        <WalletSigning
+                          key={prepared.id}
+                          plan={prepared}
+                          wallet={provider}
+                          fee={stepFee}
+                          expired={clock >= quote.expiresAt}
+                          onRefresh={() => void preview()}
+                          onObserved={() => void refreshBalances()}
+                        />
+                      )}
                     </section>
                   )}
                 </div>
               )}
               <p className="evm-note">
-                Local preview: wallet approvals and swaps are disabled. No funds
-                will move.
+                {signingEnabled
+                  ? "Local wallet signing is enabled. Approval or swap requests can move real funds only after you approve in your wallet."
+                  : "Preview: wallet approvals and swaps are disabled. No funds will move."}
               </p>
               <p className="evm-fine">
                 For eligible users only. Robinhood Stock Tokens are unavailable

@@ -75,7 +75,7 @@ function fixture() {
     changeAccount: () => (account = other),
   };
 }
-test("local execution policy is frozen and refuses real-wallet requests before wallet/storage/network access", async () => {
+test("unknown-origin policy is frozen and refuses real-wallet requests before wallet/storage/network access", async () => {
   assert.equal(localExecutionPolicy.enabled, false);
   assert.ok(Object.isFrozen(localExecutionPolicy));
   let called = 0;

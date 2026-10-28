@@ -46,7 +46,7 @@ export type Market = {
   generatedAt: string;
   halted: boolean;
   status: string;
-  transactionsEnabled: false;
+  transactionsEnabled: boolean;
 };
 export type SwapQuote = {
   referenceShortfallBps?: number;
@@ -58,7 +58,7 @@ export type SwapQuote = {
   pool: string;
   blockNumber: string;
   expiresAt: number;
-  transactionsEnabled: false;
+  transactionsEnabled: boolean;
 };
 export function amountUnits(value: string, decimals: number): bigint {
   if (!new RegExp(`^(0|[1-9]\\d{0,8})(\\.\\d{1,${decimals}})?$`).test(value))

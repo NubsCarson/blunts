@@ -1,3 +1,4 @@
+import { executionPolicyForOrigin } from "../shared/execution-policy";
 import type { Address } from "viem";
 import {
   submitSwapStep,
@@ -11,19 +12,19 @@ import { prepareSwap } from "./prepare-swap";
 import { estimateFirstStepFee } from "./gas-readiness";
 import { chainReader } from "./chain";
 import { withActivityLock } from "./activity-lock";
-// Requires a reviewed source change after owner approval. No env, URL or storage
-// flag enables real-money requests in the current local preview.
-export const localExecutionPolicy = Object.freeze({
-  chainId: 4663 as const,
-  enabled: false,
-});
+// Only the owner-approved loopback web preview may request wallet signatures.
+export const localExecutionPolicy = executionPolicyForOrigin(
+  typeof window === "undefined" ? undefined : window.location.origin,
+);
 export async function requestWalletStep(
   plan: SwapPlan,
   step: number,
   wallet: WalletRpc,
 ) {
-  if (!localExecutionPolicy.enabled)
-    throw Error("Real-wallet signing is disabled in this local preview.");
+  if (!localExecutionPolicy.enabled || !plan.quote.transactionsEnabled)
+    throw Error(
+      "Wallet signing is disabled outside the approved local preview.",
+    );
   const owner = plan.owner as Address;
   const journal = new SwapJournal(window.localStorage, owner, 4663);
   return submitSwapStep(

@@ -2,7 +2,11 @@
 
 Wallet-first local preview: normal EVM wallet + Robinhood Chain QQQ tokens, using
 Shaw's original 3D tray and Fill/Spark design. No email signup or brokerage API keys
-are required by the active preview. **Transactions are disabled; no funds move.**
+are required by the active preview. **The owner has approved local wallet signing.**
+HTTP loopback web origins can request individual wallet approvals/swaps; no
+transaction is sent automatically. Hosted and native origins remain disabled.
+The wallet holder must be eligible for the issuer's tokens and personally approve
+every real-funds request. Publishing/deployment remain unapproved.
 
 ```sh
 npm ci
@@ -14,9 +18,13 @@ npm start
 Connect an injected EVM wallet to read its QQQ/USDG balances. Fill previews a
 USDG → QQQ swap; Spark previews QQQ → USDG. Public issuer and chain data supply
 quotes and valuations. No simulated $500 balance is added to a connected wallet.
-No seed phrase, private key, wallet approval or signature is requested.
+Blunts never asks for a seed phrase or private key. Connection requests only the
+public address. Wallet approval/signing requests occur only after a separate,
+explicit step selection and eligibility acknowledgement.
 **Review wallet steps** checks the live pool, balance and allowance before showing
-finite approval and deadline-protected swap calldata. It remains a read-only review.
+finite approval and deadline-protected swap calldata. Opening the review is read-only.
+On the approved local web origin, choose each wallet step separately. Declining
+starts no next step; pending/unknown outcomes must be checked before another request.
 Reviewed direction/amount are saved for that wallet in this browser. After reload,
 reconnect, open Wallet and resume the review; a fresh quote is always required.
 Quotes more than 5% below the adjusted reference output are rejected.
@@ -55,7 +63,9 @@ the historical portion of the resume notes. It is a simulated-money system.
 Stop running services before switching source branches or opening the same
 embedded database from a second process. Never reset/clean data to switch versions.
 
-Nothing is pushed, deployed, publicly published or authorized to move real money.
+Nothing is pushed, deployed or publicly published. The owner approved local
+signing controls; this agent has not used personal keys or executed a real trade.
+Passing tests below use disposable fixtures and local forks.
 
 
 ## Mobile wallet entry

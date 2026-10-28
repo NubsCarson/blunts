@@ -1,3 +1,23 @@
+# Latest owner approval — local signing, October 28
+
+The owner explicitly approved signing and reiterated that everything must stay
+local until a later shipping/public approval. This supersedes the older "signing
+always disabled" checkpoints below. HTTP localhost/127.0.0.1 web origins now have
+user-controlled signing controls; hosted HTTPS and native/unknown origins remain
+disabled. No environment/URL/storage flag expands that scope. The holder must
+acknowledge issuer eligibility and choose every step; no agent or worker approves
+or auto-submits a personal trade. No personal-wallet signature was captured.
+
+The current UI handles finite approval and swap as separate requests, cancellation,
+receipt checking, quote expiry and unknown outcomes with no replay. A new quote is
+required when the existing one expires during approval. The next approval is never
+automatic. Older read-only native builds remain preserved as recorded.
+
+The following sections are historical receipts. Read the final local-signing
+section of `docs/evm-robinhood.md` for current proof and remaining gates.
+
+---
+
 # Current direction — wallet-first Robinhood Chain, October 28
 
 The owner explicitly changed direction: preserve the Dinari/MoonPay work and
@@ -340,3 +360,9 @@ The app was terminated and this simulator shut down; data preserved. Do not
 confuse this with visual QA: Simulator UI controls were unavailable, so rendering,
 quote taps, external wallet connection/signing and physical-phone proof remain
 missing. No personal device/account/wallet was touched.
+
+Approved local signing activation verified: localhost server restarted and health
+now reports `transactionsEnabled=true`. Final checks: 66 backend pass/two optional
+skips, 21 browser fixture cases pass. Browser-control bridge was unavailable during
+refresh, so an already-open tab may need a reload. No personal wallet connection,
+private key use, real signature/trade, hosted/native signing or deployment occurred.

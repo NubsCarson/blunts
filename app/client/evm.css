@@ -282,3 +282,19 @@
 .evm-wallet-help p {
   margin-top: 12px;
 }
+.evm-signing {
+  margin: 20px 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.evm-signing h3 {
+  font-size: 16px;
+  line-height: 1.4;
+}
+.evm-signing label {
+  align-items: flex-start;
+  font-size: 13px;
+}
+.evm-signing .primary {
+  margin-top: 16px;
+}

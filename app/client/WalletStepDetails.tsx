@@ -102,8 +102,8 @@ export function WalletStepDetails({
         </section>
       ))}
       <p className="evm-fine">
-        If a later wallet prompt differs from this review, reject it. Current
-        local signing remains disabled.
+        If a wallet prompt differs from this review, reject it. Reviewing these
+        details never opens a wallet prompt.
       </p>
     </details>
   );
