@@ -22,7 +22,7 @@ import { prepareSwap } from "../app/client/prepare-swap.js";
 import {
   SwapJournal,
   submitForkStep,
-  reconcileForkAttempt,
+  reconcileSwapAttempt,
   type WalletRpc,
   type SwapAttempt,
 } from "../app/shared/swap-journal.js";
@@ -142,7 +142,7 @@ async function execute(side: "fill" | "spark", amount: string) {
     await client.waitForTransactionReceipt({ hash: attempt.hash as Hex });
     await rpc("evm_mine");
     journal = new SwapJournal(storage, owner);
-    attempt = await reconcileForkAttempt(
+    attempt = await reconcileSwapAttempt(
       journal.read().find((r) => r.planId === plan.id && r.step === i)!,
       client,
       journal,

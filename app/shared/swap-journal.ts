@@ -9,7 +9,7 @@ const attemptSchema = z
     planId: hash,
     step: z.number().int().min(0).max(2),
     owner: address,
-    chainId: z.literal(31337),
+    chainId: z.union([z.literal(31337), z.literal(4663)]),
     call: z
       .object({
         kind: z.enum(["reset", "approve", "swap"]),
@@ -25,10 +25,15 @@ const attemptSchema = z
       "cancelled",
       "pending",
       "confirmed",
+      "included",
       "reverted",
       "reorged",
       "mismatch",
     ]),
+    tracked: z.literal(true).optional(),
+    observedAt: z.number().int().safe().nonnegative().optional(),
+    checkedAt: z.number().int().safe().nonnegative().optional(),
+    observation: z.enum(["verified", "unavailable"]).optional(),
     hash: hash.optional(),
     blockHash: hash.optional(),
     blockNumber: z.string().regex(/^\d+$/).optional(),
@@ -44,8 +49,9 @@ export class SwapJournal {
   constructor(
     private storage: JournalStorage,
     readonly owner: Address,
+    readonly chainId: 4663 | 31337 = 31337,
   ) {
-    this.key = `blunts:swap:31337:${owner.toLowerCase()}`;
+    this.key = `blunts:swap:${chainId}:${owner.toLowerCase()}`;
   }
   read(): SwapAttempt[] {
     const raw = this.storage.getItem(this.key);
@@ -53,14 +59,33 @@ export class SwapJournal {
     if (raw.length > 200000)
       throw Error("Swap history is too large. Existing records preserved.");
     const records = z.array(attemptSchema).max(100).parse(JSON.parse(raw));
-    if (records.some((r) => r.owner.toLowerCase() !== this.owner.toLowerCase()))
+    if (
+      records.some(
+        (r) =>
+          r.owner.toLowerCase() !== this.owner.toLowerCase() ||
+          r.chainId !== this.chainId,
+      )
+    )
       throw Error("Wallet history did not match.");
+    if (
+      records.some(
+        (r) =>
+          (r.chainId === 4663 && r.state === "confirmed") ||
+          (r.chainId === 31337 && r.state === "included"),
+      )
+    )
+      throw Error("Activity state did not match its chain.");
     return records;
   }
   save(record: SwapAttempt) {
     const records = this.read();
     const validated = attemptSchema.parse(record);
-    if (validated.owner.toLowerCase() !== this.owner.toLowerCase())
+    if (
+      validated.owner.toLowerCase() !== this.owner.toLowerCase() ||
+      validated.chainId !== this.chainId ||
+      (validated.chainId === 4663 && validated.state === "confirmed") ||
+      (validated.chainId === 31337 && validated.state === "included")
+    )
       throw Error("Wallet history did not match.");
     const index = records.findIndex(
       (r) => r.planId === record.planId && r.step === record.step,
@@ -125,6 +150,7 @@ export async function submitForkStep(
     )
       throw Error("Wallet plan was changed. Prepare again.");
     if (
+      journal.chainId !== 31337 ||
       (await reader.getChainId()) !== 31337 ||
       Number(await wallet.request({ method: "eth_chainId" })) !== 31337
     )
@@ -231,25 +257,33 @@ export async function submitForkStep(
 export type ReceiptReader = {
   getChainId(): Promise<number>;
   getTransaction(args: { hash: Hex }): Promise<{
+    hash: Hex;
     from: string;
     to: string | null;
     input: Hex;
     value: bigint;
     nonce: number;
   }>;
-  getTransactionReceipt(args: {
-    hash: Hex;
-  }): Promise<{ status: string; blockHash: Hex; blockNumber: bigint }>;
+  getTransactionReceipt(args: { hash: Hex }): Promise<{
+    status: "success" | "reverted";
+    transactionHash: Hex;
+    blockHash: Hex;
+    blockNumber: bigint;
+  }>;
   getBlock(args: { blockNumber: bigint }): Promise<{ hash: Hex | null }>;
   getBlockNumber(): Promise<bigint>;
 };
-export async function reconcileForkAttempt(
+export async function reconcileSwapAttempt(
   attempt: SwapAttempt,
   reader: ReceiptReader,
   journal: SwapJournal,
 ): Promise<SwapAttempt> {
-  if ((await reader.getChainId()) !== 31337)
-    throw Error("Wrong recovery chain.");
+  if (
+    (await reader.getChainId()) !== journal.chainId ||
+    attempt.chainId !== journal.chainId ||
+    attempt.owner.toLowerCase() !== journal.owner.toLowerCase()
+  )
+    throw Error("Wrong recovery chain or wallet.");
   if (!attempt.hash) return attempt; // No hash: uncertainty cannot authorize resubmission.
   let tx, receipt;
   try {
@@ -274,10 +308,20 @@ export async function reconcileForkAttempt(
         /* Missing history is not proof of a reorg. */
       }
     }
-    return attempt;
+    const unavailable = {
+      ...attempt,
+      checkedAt: Date.now(),
+      observation: "unavailable" as const,
+    };
+    journal.save(unavailable);
+    return unavailable;
   }
+  if (!["success", "reverted"].includes(receipt.status))
+    throw Error("Receipt status is not recognized.");
   const next = { ...attempt };
   if (
+    tx.hash.toLowerCase() !== attempt.hash.toLowerCase() ||
+    receipt.transactionHash.toLowerCase() !== attempt.hash.toLowerCase() ||
     tx.from.toLowerCase() !== attempt.owner.toLowerCase() ||
     tx.to?.toLowerCase() !== attempt.call.to.toLowerCase() ||
     tx.input !== attempt.call.data ||
@@ -297,11 +341,16 @@ export async function reconcileForkAttempt(
       next.state =
         receipt.status === "reverted"
           ? "reverted"
-          : head >= receipt.blockNumber + 1n
-            ? "confirmed"
-            : "pending";
+          : journal.chainId === 4663
+            ? "included"
+            : head >= receipt.blockNumber + 1n
+              ? "confirmed"
+              : "pending";
     }
   }
+  next.observedAt = Date.now();
+  next.checkedAt = next.observedAt;
+  next.observation = "verified";
   journal.save(next);
   return next;
 }

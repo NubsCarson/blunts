@@ -28,6 +28,8 @@ import {
   type SavedReview,
 } from "./review-store";
 import { ReferenceGapError } from "../shared/reference-price";
+import { TransactionActivity } from "./TransactionActivity";
+import { estimateFirstStepFee, type StepFee } from "./gas-readiness";
 import type { SwapPlan } from "../shared/swap-plan";
 type Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<any>;
@@ -56,6 +58,8 @@ export function EvmApp() {
     [amount, setAmount] = useState("25"),
     [quote, setQuote] = useState<SwapQuote | null>(null),
     [prepared, setPrepared] = useState<SwapPlan | null>(null),
+    [stepFee, setStepFee] = useState<StepFee | null>(null),
+    [feeUnavailable, setFeeUnavailable] = useState(false),
     [savedReview, setSavedReview] = useState<SavedReview | null>(null),
     [reviewStorageError, setReviewStorageError] = useState(""),
     [restoredReview, setRestoredReview] = useState(false),
@@ -239,6 +243,8 @@ export function EvmApp() {
   }
   useEffect(() => {
     setPrepared(null);
+    setStepFee(null);
+    setFeeUnavailable(false);
   }, [quote, account, chain]);
   useEffect(() => {
     if (prepared)
@@ -274,7 +280,8 @@ export function EvmApp() {
     setRestoredReview(true);
   }
   async function reviewSteps() {
-    if (!quote || !account || chain !== 4663 || !market) return;
+    if (!quote || quote.side !== panel || !account || chain !== 4663 || !market)
+      return;
     const version = quoteEpoch.current,
       identity = epoch.current;
     setBusy(true);
@@ -282,6 +289,7 @@ export function EvmApp() {
     setPrepared(null);
     try {
       const plan = await prepareSwap(quote, account, reader, 4663, market);
+      const fee = await estimateFirstStepFee(plan).catch(() => null);
       if (version === quoteEpoch.current && identity === epoch.current) {
         const saved = new ReviewStore(window.localStorage).save(
           account,
@@ -290,6 +298,8 @@ export function EvmApp() {
         );
         setSavedReview(saved);
         setReviewStorageError("");
+        setStepFee(fee);
+        setFeeUnavailable(fee === null);
         setPrepared(plan);
       }
     } catch (failure) {
@@ -490,6 +500,12 @@ export function EvmApp() {
                         </button>
                       </section>
                     )}
+                  {chain === 4663 && (
+                    <TransactionActivity
+                      key={account.toLowerCase()}
+                      owner={account}
+                    />
+                  )}
                   {reviewStorageError && (
                     <p className="evm-error" role="status">
                       {reviewStorageError}
@@ -594,7 +610,7 @@ export function EvmApp() {
               >
                 {busy ? "Checking pools…" : "Preview swap"}
               </button>
-              {quote && (
+              {quote && quote.side === panel && (
                 <div className="evm-quote" role="status">
                   <div>
                     <span>You receive approximately</span>
@@ -652,6 +668,29 @@ export function EvmApp() {
                           </li>
                         ))}
                       </ol>
+                      {stepFee?.status === "needs_eth" && (
+                        <p>
+                          Add ETH on Robinhood Chain for network fees. Your
+                          current ETH balance is zero.
+                        </p>
+                      )}
+                      {stepFee?.status === "estimated" && (
+                        <p>
+                          First step fee estimate:{" "}
+                          {formatUnits(stepFee.estimatedFeeWei, 18)} ETH (20%
+                          gas buffer).{" "}
+                          {stepFee.hasEnoughEth
+                            ? "Your ETH balance covers this estimate."
+                            : "Not enough ETH for this estimate."}{" "}
+                          Your wallet confirms the final fee.
+                        </p>
+                      )}
+                      {feeUnavailable && (
+                        <p>
+                          Network fee could not be estimated. Refresh the quote
+                          before signing.
+                        </p>
+                      )}
                       <p>
                         Saved for this wallet. Reloading requires a fresh quote.
                       </p>

@@ -70,9 +70,10 @@ backend/UI. Do not run the old provider API/CLI concurrently on its PGlite journ
 
 Transaction calldata construction, finite-approval planning, independent chain
 preflight and an isolated-fork recovery engine are now implemented and qualified
-as described below. Production wallet signing/broadcast, browser-persistent
-activity/recovery UI, mainnet/L1 settlement validation, price-impact protection,
-fee collection and an owner-approved real-wallet execution cycle remain unfinished. WalletConnect/mobile external
+as described below. Production wallet signing/broadcast, multi-tab submission coordination,
+replacement-transaction recovery, mainnet/L1 settlement validation, fee collection
+and an owner-approved real-wallet execution cycle remain unfinished. Browser
+review/activity recovery and the reference guard were added in the later sections. WalletConnect/mobile external
 wallet continuation is also unfinished; this preview supports injected wallets.
 No actual native builds were rebuilt for this pivot. No bank/card funding,
 withdrawal, bridge, custom token, fee contract or pooled wallet was introduced.
@@ -226,3 +227,75 @@ recovery, ETH fee readiness, mobile external-wallet continuation, fee collection
 the wallet-first adaptation of the five-step walkthrough, and an owner-approved
 real-wallet execution/settlement test. Existing provider/native/creative history
 remains preserved; native builds were not rerun for these browser changes.
+
+
+## October 28 follow-up: activity and ETH readiness
+
+Wallet → **Activity on this browser** now accepts an existing transaction hash,
+checks its sender and chain, and decodes only the canonical token approvals or
+single-step, own-recipient QQQ/USDG SwapRouter02 route. It never signs, sends or
+replays a transaction. Arbitrary routers, tokens, recipients, ETH value and batches
+are rejected. A tracked record is labeled as observed activity; it is not evidence
+that Blunts originally submitted it. Direct approvals and this app's exact-input
+route are supported; this is not a general wallet-history indexer.
+
+The same serialized journal now supports isolated fork chain 31337 and read-only
+mainnet chain 4663, with distinct wallet/chain storage keys. A successful mainnet
+receipt becomes **Included on Robinhood Chain**, never the fork's `confirmed`
+state. Recovery matches transaction and receipt hashes, sender, nonce, target,
+calldata, zero ETH value and canonical block hash. A missing response can attach
+a hash to exactly one existing unknown attempt only if nonce/call/sender all
+match. No retry is authorized by that lookup. Replacement/cancellation workflows
+with changed calls or already-known replacement hashes remain unfinished.
+
+RPC failure preserves the last verified state and proof timestamp, while recording
+that the latest observation was unavailable. It cannot invent a fresh inclusion
+or a reorg. The browser list survives a real page reload, stays isolated across
+wallet changes and has a private JSON download. Export contains only this browser's
+wallet/chain records and metadata, no authentication/session data or private keys.
+History is currently capped at 100 records; archival/capacity policy is unfinished,
+and history is never automatically discarded to make room.
+
+The Activity disclosure starts closed to keep the wallet view focused. Close
+remains visible while long sheets scroll. The public build still omits the
+fork-only submission helper. No mainnet writer or enablement flag was introduced.
+
+### Fee readiness
+
+After independent quote preflight, review estimates the **first** wallet step
+using `eth_estimateGas` and current gas price, with a 20% gas-unit buffer. This
+is not a sum of all later steps: a later swap may require an approval first.
+The [chain fee documentation](https://docs.robinhood.com/chain/gas-and-fees/)
+says standard estimates include both L2 execution and L1 data fees. The wallet's
+final fee preview remains authoritative. ETH balance is read first; zero ETH
+produces a clear funding-needed state without attempting a doomed gas estimate.
+Unavailable estimates are reported as unavailable, not as zero cost or readiness.
+No fee was actually charged by this read-only review.
+
+### Qualification boundaries
+
+The [finality guide](https://docs.robinhood.com/chain/transaction-finality/)
+distinguishes sequencer receipt, Ethereum posting and Ethereum finality. The
+tracker verifies L2 inclusion only. It does not establish L1 finality, a bridge
+withdrawal, bank payout or stock ownership rights.
+
+A fresh isolated Anvil fork at Robinhood block **100007535**, exposed only as
+chain **31337**, passed the complete buy/sell and post-broadcast lost-response
+case with the updated receipt-hash checks. Five fixture wallet requests and five
+journal records were retained; QQQ returned to zero. The fork node was then
+stopped. Timestamped private receipts remain under `data/review-20261028/evm/`.
+This did not access the owner's wallet, broadcast to mainnet or spend real funds.
+
+One bounded public query checked 2,000 blocks of the known QQQ/USDG pool, filtered
+to the published router. It found one event but no compatible direct transaction
+for this tracker's exact route. No further scanning was performed. That attempt
+is not reported as mainnet receipt acceptance. Current receipt qualification is
+therefore actual local-fork execution plus browser/RPC fixtures, with mainnet
+owner-wallet acceptance still missing.
+
+Expanded browser checks cover activity import, inclusion labeling, reload,
+per-wallet isolation, receipt refresh, JSON export, positive gas readiness and
+zero-ETH handling. They continue to record only connection/read wallet methods,
+never sign/send. An initial zero-ETH check exposed a fixed-value test fixture;
+the fixture was corrected and all three engines passed the corrected case.
+These browser checks use disposable fixture balances and hashes.

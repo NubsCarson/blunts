@@ -1,5 +1,18 @@
+import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
-import { encodeAbiParameters, toFunctionSelector } from "viem";
+import {
+  encodeAbiParameters,
+  encodeFunctionData,
+  parseAbi,
+  toFunctionSelector,
+} from "viem";
+const trackedHash = `0x${"a".repeat(64)}`;
+const trackedBlock = `0x${"b".repeat(64)}`;
+const trackedInput = encodeFunctionData({
+  abi: parseAbi(["function approve(address,uint256) returns(bool)"]),
+  functionName: "approve",
+  args: ["0xcaf681a66d020601342297493863e78c959e5cb2", 25000000n],
+});
 const wallet = "0x1111111111111111111111111111111111111111";
 test("wallet-first preview connects without signup, reads balances and never sends money", async ({
   page,
@@ -23,15 +36,63 @@ test("wallet-first preview connects without signup, reads balances and never sen
     },
     { wallet },
   );
+  let nativeEth = "0xde0b6b3a7640000";
   await page.route(
     "https://rpc.mainnet.chain.robinhood.com/",
     async (route) => {
       const body = route.request().postDataJSON();
       const reply = (item: any) => {
-        let result: string;
+        let result: unknown;
         const selector = item.params?.[0]?.data?.slice(0, 10);
         if (item.method === "eth_chainId") result = "0x1237";
-        else if (item.method === "eth_getBalance") result = "0xde0b6b3a7640000";
+        else if (item.method === "eth_estimateGas") result = "0x186a0";
+        else if (item.method === "eth_gasPrice") result = "0x989680";
+        else if (item.method === "eth_blockNumber") result = "0xb";
+        else if (item.method === "eth_getTransactionByHash")
+          result = {
+            hash: trackedHash,
+            from: wallet,
+            to: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+            input: trackedInput,
+            value: "0x0",
+            nonce: "0x7",
+            gas: "0x186a0",
+            gasPrice: "0x989680",
+            blockHash: trackedBlock,
+            blockNumber: "0xa",
+            transactionIndex: "0x0",
+            chainId: "0x1237",
+            type: "0x0",
+          };
+        else if (item.method === "eth_getTransactionReceipt")
+          result = {
+            transactionHash: trackedHash,
+            from: wallet,
+            to: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+            status: "0x1",
+            blockHash: trackedBlock,
+            blockNumber: "0xa",
+            transactionIndex: "0x0",
+            gasUsed: "0x5208",
+            cumulativeGasUsed: "0x5208",
+            effectiveGasPrice: "0x989680",
+            logs: [],
+            logsBloom: `0x${"0".repeat(512)}`,
+            contractAddress: null,
+            type: "0x0",
+          };
+        else if (item.method === "eth_getBlockByNumber")
+          result = {
+            hash: trackedBlock,
+            number: "0xa",
+            parentHash: trackedHash,
+            timestamp: "0x6a000000",
+            gasLimit: "0x1000000",
+            gasUsed: "0x5208",
+            baseFeePerGas: "0x989680",
+            transactions: [],
+          };
+        else if (item.method === "eth_getBalance") result = nativeEth;
         else if (item.method === "eth_getCode") result = "0x6000";
         else if (selector === toFunctionSelector("decimals()"))
           result = encodeAbiParameters([{ type: "uint8" }], [6]);
@@ -146,6 +207,9 @@ test("wallet-first preview connects without signup, reads balances and never sen
   expect(
     await page.evaluate(() => (window as any).fixtureWalletRequests),
   ).toEqual(["eth_requestAccounts", "eth_chainId"]);
+  await expect(
+    page.getByText(/Your ETH balance covers this estimate/),
+  ).toBeVisible();
   await page.screenshot({ path: info.outputPath("prepared-wallet-steps.png") });
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.screenshot({ path: info.outputPath("evm-wallet-tray.png") });
@@ -163,6 +227,54 @@ test("wallet-first preview connects without signup, reads balances and never sen
   await expect(
     page.getByRole("region", { name: "Saved review" }),
   ).toBeVisible();
+  await page.getByText("Activity on this browser", { exact: true }).click();
+  await page.getByLabel("Transaction hash", { exact: true }).fill(trackedHash);
+  await page
+    .getByRole("button", { name: "Track transaction", exact: true })
+    .click();
+  await expect(
+    page.getByText("Included on Robinhood Chain", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Ethereum finality has not been checked. Bank or bridge withdrawals are separate.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download activity", exact: true })
+    .click();
+  const download = await downloadPromise;
+  const exported = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(exported.chainId).toBe(4663);
+  expect(exported.wallet.toLowerCase()).toBe(wallet.toLowerCase());
+  expect(exported.records).toHaveLength(1);
+  expect(exported.records[0].hash).toBe(trackedHash);
+  expect(Object.keys(exported).sort()).toEqual(
+    ["version", "chainId", "wallet", "exportedAt", "records"].sort(),
+  );
+  await expect(
+    page.getByRole("button", { name: "Close", exact: true }),
+  ).toBeInViewport();
+  await page.screenshot({ path: info.outputPath("tracked-activity.png") });
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Connect wallet", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Browser wallet", exact: true })
+    .click();
+  await page.locator(".evm-connect button").click();
+  await page.getByText("Activity on this browser", { exact: true }).click();
+  await expect(
+    page.getByText("Included on Robinhood Chain", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".evm-activity-list li")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Check receipt", exact: true })
+    .click();
+  await expect(page.locator(".evm-activity-list li")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Resume Fill review", exact: true })
     .click();
@@ -180,6 +292,21 @@ test("wallet-first preview connects without signup, reads balances and never sen
     await page.evaluate(() => (window as any).fixtureWalletRequests),
   ).toEqual(["eth_requestAccounts", "eth_chainId"]);
   await page.screenshot({ path: info.outputPath("resumed-review.png") });
+  nativeEth = "0x0";
+  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Review wallet steps", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "Add ETH on Robinhood Chain for network fees. Your current ETH balance is zero.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as any).fixtureWalletRequests),
+  ).toEqual(["eth_requestAccounts", "eth_chainId"]);
+
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.evaluate(() => {
     (window as any).fixtureAccountsChanged([

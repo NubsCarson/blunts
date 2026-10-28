@@ -20,6 +20,9 @@ finite approval and deadline-protected swap calldata. It remains a read-only rev
 Reviewed direction/amount are saved for that wallet in this browser. After reload,
 reconnect, open Wallet and resume the review; a fresh quote is always required.
 Quotes more than 5% below the adjusted reference output are rejected.
+Wallet → Activity can track an existing compatible transaction, refresh its
+receipt and export this browser's records. Inclusion is shown separately from
+Ethereum finality. Wallet-step review also checks ETH fee readiness.
 
 The quote path reads direct Uniswap pools. It does not submit swaps or withdraw
 dollars to a bank. Robinhood Stock Tokens carry issuer/jurisdiction restrictions,

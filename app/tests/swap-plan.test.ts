@@ -5,7 +5,7 @@ import { swapPlan, approvalAbi, routerAbi } from "../shared/swap-plan.js";
 import {
   SwapJournal,
   submitForkStep,
-  reconcileForkAttempt,
+  reconcileSwapAttempt,
   type JournalStorage,
   type ReceiptReader,
   type ForkReader,
@@ -220,6 +220,7 @@ test("receipt recovery verifies sender, nonce and calldata; RPC outage does not 
   const reader: ReceiptReader = {
     getChainId: async () => 31337,
     getTransaction: async () => ({
+      hash: txHash,
       from: owner,
       to: plan.calls[0].to,
       input: plan.calls[0].data,
@@ -228,24 +229,25 @@ test("receipt recovery verifies sender, nonce and calldata; RPC outage does not 
     }),
     getTransactionReceipt: async () => ({
       status: "success",
+      transactionHash: txHash,
       blockHash,
       blockNumber: 10n,
     }),
     getBlock: async () => ({ hash: blockHash }),
     getBlockNumber: async () => 11n,
   };
-  const confirmed = await reconcileForkAttempt(attempt, reader, f.journal);
+  const confirmed = await reconcileSwapAttempt(attempt, reader, f.journal);
   assert.equal(confirmed.state, "confirmed");
   reader.getTransaction = async () => {
     throw Error("RPC outage");
   };
   assert.equal(
-    (await reconcileForkAttempt(confirmed, reader, f.journal)).state,
+    (await reconcileSwapAttempt(confirmed, reader, f.journal)).state,
     "confirmed",
   );
   reader.getBlock = async () => ({ hash: txHash });
   assert.equal(
-    (await reconcileForkAttempt(confirmed, reader, f.journal)).state,
+    (await reconcileSwapAttempt(confirmed, reader, f.journal)).state,
     "reorged",
   );
   const m = fixture(),
@@ -258,6 +260,7 @@ test("receipt recovery verifies sender, nonce and calldata; RPC outage does not 
       m.locked,
     );
   reader.getTransaction = async () => ({
+    hash: txHash,
     from: owner,
     to: stock.address,
     input: plan.calls[0].data,
@@ -265,7 +268,7 @@ test("receipt recovery verifies sender, nonce and calldata; RPC outage does not 
     nonce: 7,
   });
   assert.equal(
-    (await reconcileForkAttempt(pending, reader, m.journal)).state,
+    (await reconcileSwapAttempt(pending, reader, m.journal)).state,
     "mismatch",
   );
   assert.throws(() => f.journal.save({ ...confirmed, nonce: 8 }));

@@ -31,6 +31,15 @@ than 5% below the multiplier-adjusted nominal-USDG reference. Full backend suite
 The public endpoint was read-verified, and real signing remains disabled. See the
 latest section of `docs/evm-robinhood.md` for limitations and remaining work.
 
+Latest activity follow-up adds Wallet → Activity for read-only compatible hash
+tracking, exact unknown-attempt/hash matching, mainnet **inclusion** (not finality)
+labels, per-wallet browser persistence and private JSON export. ETH readiness
+estimates only the next wallet step and handles zero ETH explicitly. The writer
+remains hard-gated to local fork chain 31337 and is omitted from the public bundle.
+A fresh fork cycle at source block 100007535 passed again; its process was stopped.
+Mainnet signing, multi-tab submission, replacement recovery and L1 finality proof
+remain unfinished. No owner wallet or real funds were used.
+
 The historical checkpoint below is preserved for recovery, not the active plan.
 
 ---
@@ -254,3 +263,14 @@ Read next:
 [first-party integration](first-party-integration.md),
 [local review](local-review-2026-10-27.md),
 [deferred creative concepts](creative-proposals.md).
+
+## Crash recovery — October 28
+
+The desktop crash preserved all source changes. The activity/ETH-readiness work
+was still uncommitted after `e736aae`; it was recovered in place, without resets,
+cleaning databases or recreating credentials. The wallet-first server was stopped
+by the crash and was restarted on loopback port 8745. Health confirms
+`evm-preview`, `transactionsEnabled=false`. No Anvil process was running.
+Fresh full checks passed 55 cases with two explicitly skipped integrations:
+optional PostgreSQL and actual local Steward (service not running on this resume).
+These are distinct from the earlier 56-pass run that included isolated Steward.
