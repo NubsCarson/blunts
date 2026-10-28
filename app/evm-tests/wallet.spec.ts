@@ -379,7 +379,8 @@ test("wallet walkthrough explains the actual route and keeps preview-only bounda
       json: { error: "Fixture market unavailable" },
     }),
   );
-  await page.goto("/");
+  const boot = await page.goto("/");
+  expect(boot?.status()).toBe(200);
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("button", { name: "How it works", exact: true }).click();
   const walkthrough = page.getByRole("region", {

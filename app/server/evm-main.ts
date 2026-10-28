@@ -1,3 +1,4 @@
+import { evmRateLimit } from "./evm-rate-limit.js";
 import { ReferenceGapError } from "../shared/reference-price.js";
 import { amountUnits } from "../shared/robinhood.js";
 import Fastify from "fastify";
@@ -30,7 +31,7 @@ await app.register(helmet, {
     },
   },
 });
-await app.register(rateLimit, { max: 90, timeWindow: "1 minute" });
+await app.register(rateLimit, evmRateLimit);
 app.get("/api/health", async () => ({
   ok: true,
   mode: "evm-preview",

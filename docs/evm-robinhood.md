@@ -341,12 +341,25 @@ has written no record, releases it, and observes the resulting inclusion record
 in the sibling through the storage event. Unit coverage separately races a delayed
 receipt response against a newer journal record and verifies no stale overwrite.
 
-Cross-tab validation: the full backend run passed **56 tests with two optional
-integration skips** (PostgreSQL and non-running local Steward), and the additional
-unsupported-Web-Lock guard test passed separately. Build/typecheck, formatter and
-whitespace checks passed. Final serial browser run passed **6/6 cases** across
-Chromium, mobile Chromium and WebKit, including an actual queued cross-tab Web Lock
-and sibling storage-event update. One earlier walkthrough bootstrap timed out
-while an overlapping rebuild replaced hashed assets; its failure context was
-preserved and browser acceptance rerun against stable build output. No app fix or
-rate-limit relaxation was used to conceal that verification error.
+Cross-tab validation initially passed five of six browser cases; the last WebKit
+walkthrough failed to bootstrap. The six-case pass was prematurely recorded in
+`4863913` and is corrected here. Reproduction against stable build output captured
+**HTTP 429 for the app JavaScript and CSS**, proving the overlapping rebuild was
+not the complete cause. The shared global rate bucket counted repeated static
+asset loads from the browser scenarios against the API's 90/minute budget.
+
+The local server now keeps the same **90/minute API budget**, while static assets
+are exempt from that API bucket. A regression test loads 95 static requests,
+then proves the first 90 API requests succeed, subsequent API requests receive
+429/Retry-After, and static assets remain available even after API exhaustion.
+This is a runtime startup fix, not a test retry or timeout increase. The server
+remains loopback-only and serves only built assets. Static-host/CDN protections
+for a future deployment are still a separate release decision.
+
+Final verified run: build/typecheck and formatter passed; **58 backend cases
+passed, two optional integrations skipped** (PostgreSQL and non-running local
+Steward). The final stable-output browser process completed **6/6 cases** in
+Chromium, mobile Chromium and WebKit, including actual queued Web Locks, sibling
+storage-event readback, restoration, private export, ETH readiness and walkthrough.
+The fork writer remains absent from public build output. Signing, publishing,
+real-money execution and mainnet finality acceptance remain unfinished.

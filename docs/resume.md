@@ -287,3 +287,11 @@ Receipt observations reject stale overwrites. This does not enable signing;
 normal browser tabs only track/read existing compatible transactions. Unsupported
 Web-Lock environments may read/export but cannot update activity. See the latest
 section of `docs/evm-robinhood.md` for scope and proof.
+
+Cross-tab follow-up uncovered and fixed a real bootstrap issue: repeated static
+loads exhausted the API's global 90/minute bucket and returned HTTP 429 for JS/CSS.
+The API budget is unchanged; built static assets no longer consume that bucket.
+The earlier premature 6/6 claim in `4863913` is superseded by the final completed
+run: **58 backend passed/two optional skips, six browser cases passed**. Loopback
+preview was restarted with this fix. No source reset, data cleanup, credentials,
+mainnet writes, deployment or publishing occurred.
