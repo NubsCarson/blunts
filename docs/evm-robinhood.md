@@ -933,3 +933,44 @@ on 8745 was restarted and its health returned `transactionsEnabled: true`.
 That enables individual holder-controlled web requests locally, with no automatic
 trade and no hosted/native enablement. Documentation changes follow the tested
 source commit; they do not change the app or artifact hashes.
+
+
+## Installed MetaMask connection and real balance timing fix — October 28
+
+The owner-authorized nubsontopgang Chrome profile has installed MetaMask. Its
+normal localhost connection returned the owner's public 0x4a27…3073 account.
+The wallet initially selected Ink (57073); the app's switch request selected
+Robinhood Chain. This exposed a real bug: balance invalidation after switching
+could leave the UI unavailable until manual refresh.
+
+A controlled browser regression first reproduced an early network event followed
+by a later switch acknowledgement. Moving invalidation before the request fixed
+that ordering, but the actual MetaMask retest still failed. The remaining gap was
+identity announcements with unchanged scalar state: they invalidated outstanding
+reads while the React account/chain dependencies did not schedule a new read.
+Commit `91b507b` adds a wallet revision dependency and prevents a late switch
+acknowledgement from overriding the newer event-owned view. Tests cover early and
+absent network events, followed by repeated identical chain/account events.
+
+The final actual MetaMask retest started on Ink again, used the app switch to
+4663 and displayed $0.00 / 0 USDG automatically, without Refresh balances.
+Reload/reconnect worked. A live 25-USDG Fill quote disclosed the 1% output fee.
+Read-only preparation then displayed "Not enough USDG in this wallet." instead
+of the generic verification error. Only a known typed local balance error may
+supply that message; arbitrary RPC error text is still not rendered. No wallet
+signing prompt opened, no token allowance was granted and no funds moved.
+
+Private receipt and screenshots are in
+`data/review-20261028/evm/metamask-installed-readonly-receipt.json`,
+`metamask-network-switch-fixed.png`, `metamask-insufficient-usdg.png`.
+The receipt ties the observations to commit `91b507b` and the served bundle hash.
+These establish installed-browser connection, network switching, live reads and
+insufficient-funds rejection only. They do not establish holder eligibility,
+installed-wallet signing, mainnet swap acceptance or mobile/hardware behavior.
+
+Final checks: 78 passed/two optional skips, browser 30 passed, formatting passed.
+Fresh Android debug and unsigned iOS Simulator builds passed; all nine JavaScript
+bundles matched both packages. Private artifacts/checksums are preserved under
+`data/review-20261028/evm/wallet-live-native-checkpoint/`. Native signing remains
+disabled, the preview remains loopback-only, and shipping remains unapproved.
+The prior fee and native checkpoints remain intact.

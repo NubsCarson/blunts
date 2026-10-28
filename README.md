@@ -54,7 +54,10 @@ npm run format:check
 ```
 
 Browser tests use disposable wallet/RPC fixtures. Real issuer/public-chain quote
-receipts are recorded separately. Fixture checks are not executed-trade proof.
+receipts are recorded separately. Installed MetaMask connection, network switching,
+reload/reconnect, live quote reads and insufficient-funds rejection were also
+verified in the owner's Chrome profile. No personal trade was executed. Fixture
+checks and read-only wallet acceptance are not executed-trade proof.
 
 ## Preserved provider version
 

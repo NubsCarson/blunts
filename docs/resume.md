@@ -1,3 +1,37 @@
+# Actual installed MetaMask read-only qualification — latest October 28
+
+Source commit `91b507b` fixes the actual installed-wallet network-switch race.
+Events invalidate wallet reads before switching, and repeated account/network
+announcements now schedule new balance reads even when the scalar address/chain
+has not changed. A late switch acknowledgement cannot clear a newer view.
+Known insufficient token balance now gets a precise, safe error message.
+
+Verified in the owner's nubsontopgang Chrome profile using installed MetaMask:
+normal connection approval, original Ink chain 57073 → Robinhood 4663, automatic
+actual zero QQQ/USDG balance display without manual refresh, reload/reconnect,
+live public quote with 1% fee, and read-only Fill preparation correctly blocked
+with "Not enough USDG in this wallet." No signing controls were selected, no
+signature or approval request was opened, no personal key read and no tokens moved.
+Holder eligibility was not established. A swap remains unproven. The wallet is
+left connected on Robinhood Chain with the local app tab available for review.
+
+Private actual-browser evidence:
+`data/review-20261028/evm/metamask-installed-readonly-receipt.json`,
+`metamask-network-switch-fixed.png`, `metamask-insufficient-usdg.png`.
+The receipt records the exact served JS bundle hash and screenshot hashes.
+The regression failed against the old build and the final browser suite passed
+30 cases across Chromium, mobile Chromium and WebKit. Backend: 78 passed, two
+optional service skips; formatting passed.
+
+Updated local Android debug and unsigned iOS Simulator builds passed from this
+commit; nine JS bundles matched both packages. Artifacts/checksums are preserved
+in `data/review-20261028/evm/wallet-live-native-checkpoint/`. Native/hosted signing
+stays disabled. No public host, release signing or deployment was created.
+Remaining acceptance: physical mobile/hardware wallet behavior, eligible/funded
+holder mainnet execution, and owner approval before public shipping.
+
+---
+
 # Current fee checkpoint — October 28
 
 The owner approved 1% on Fill and Spark to
