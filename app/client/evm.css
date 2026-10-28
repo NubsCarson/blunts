@@ -154,3 +154,21 @@
   outline: 2px solid var(--gold);
   outline-offset: 4px;
 }
+.evm-plan {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.evm-plan h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+  color: var(--paper);
+}
+.evm-plan ol {
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.evm-plan li {
+  margin: 8px 0;
+}

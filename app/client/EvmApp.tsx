@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createPublicClient, http, formatUnits, type Address } from "viem";
+import { formatUnits, type Address } from "viem";
 import {
   BanknoteArrowDown,
   Flame,
@@ -20,19 +20,15 @@ import {
   type SwapQuote,
 } from "../shared/robinhood";
 import "./evm.css";
+import { chainReader as reader } from "./chain";
+import { prepareSwap } from "./prepare-swap";
+import type { SwapPlan } from "../shared/swap-plan";
 type Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<any>;
   on?: (name: string, fn: (value: any) => void) => void;
   removeListener?: (name: string, fn: (value: any) => void) => void;
 };
 type WalletChoice = { id: string; name: string; provider: Provider };
-const reader = createPublicClient({
-  chain: robinhood,
-  transport: http(robinhood.rpcUrls.default.http[0], {
-    retryCount: 0,
-    timeout: 10000,
-  }),
-});
 const usd = (value: bigint) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
     Number(value) / 100,
@@ -53,11 +49,13 @@ export function EvmApp() {
     ),
     [amount, setAmount] = useState("25"),
     [quote, setQuote] = useState<SwapQuote | null>(null),
+    [prepared, setPrepared] = useState<SwapPlan | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [marketError, setMarketError] = useState(""),
     [clock, setClock] = useState(Date.now());
   const quoteEpoch = useRef(0);
+  const preparedSection = useRef<HTMLElement>(null);
   const epoch = useRef(0),
     dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -226,6 +224,38 @@ export function EvmApp() {
       setBalances(null);
     } catch {
       setError("Select Robinhood Chain (4663) in your wallet, then reconnect.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  useEffect(() => {
+    setPrepared(null);
+  }, [quote, account, chain]);
+  useEffect(() => {
+    if (prepared)
+      preparedSection.current?.scrollIntoView({
+        block: "nearest",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+  }, [prepared]);
+  async function reviewSteps() {
+    if (!quote || !account || chain !== 4663) return;
+    const version = quoteEpoch.current,
+      identity = epoch.current;
+    setBusy(true);
+    setError("");
+    setPrepared(null);
+    try {
+      const plan = await prepareSwap(quote, account);
+      if (version === quoteEpoch.current && identity === epoch.current)
+        setPrepared(plan);
+    } catch {
+      if (version === quoteEpoch.current && identity === epoch.current)
+        setError(
+          "Wallet steps could not be verified. Check your balance and preview again.",
+        );
     } finally {
       setBusy(false);
     }
@@ -509,6 +539,46 @@ export function EvmApp() {
                       ? "Quote expired. Preview again."
                       : `Quote valid for ${Math.max(0, Math.ceil((quote.expiresAt - clock) / 1000))}s`}
                   </p>
+                  <button
+                    disabled={
+                      busy ||
+                      !account ||
+                      chain !== 4663 ||
+                      clock >= quote.expiresAt
+                    }
+                    onClick={() => void reviewSteps()}
+                  >
+                    {busy ? "Verifying wallet steps…" : "Review wallet steps"}
+                  </button>
+                  {prepared && (
+                    <section
+                      className="evm-plan"
+                      aria-label="Prepared wallet steps"
+                      ref={preparedSection}
+                    >
+                      <h2>Your wallet would confirm</h2>
+                      <ol>
+                        {prepared.calls.map((call, index) => (
+                          <li key={index}>
+                            {call.kind === "reset"
+                              ? "Clear the previous token allowance"
+                              : call.kind === "approve"
+                                ? `Approve only ${quote.amountIn} ${panel === "fill" ? "USDG" : "QQQ"}`
+                                : "Swap with the displayed minimum output"}
+                          </li>
+                        ))}
+                      </ol>
+                      <p>
+                        Tokens return to your connected wallet. Network fees are
+                        paid in ETH.
+                      </p>
+                      <p>
+                        {clock >= quote.expiresAt
+                          ? "This plan expired. Preview again."
+                          : "Review only. Signing stays disabled in this local build."}
+                      </p>
+                    </section>
+                  )}
                 </div>
               )}
               <p className="evm-note">

@@ -68,9 +68,11 @@ backend/UI. Do not run the old provider API/CLI concurrently on its PGlite journ
 
 ## Remaining work
 
-Transaction construction, exact finite approvals, user wallet signing, preflight,
-receipt/reorg recovery, slippage/price-impact protection, chain balance refresh,
-and an approved test execution cycle are unfinished. WalletConnect/mobile external
+Transaction calldata construction, finite-approval planning, independent chain
+preflight and an isolated-fork recovery engine are now implemented and qualified
+as described below. Production wallet signing/broadcast, browser-persistent
+activity/recovery UI, mainnet/L1 settlement validation, price-impact protection,
+fee collection and an owner-approved real-wallet execution cycle remain unfinished. WalletConnect/mobile external
 wallet continuation is also unfinished; this preview supports injected wallets.
 No actual native builds were rebuilt for this pivot. No bank/card funding,
 withdrawal, bridge, custom token, fee contract or pooled wallet was introduced.
@@ -101,3 +103,81 @@ The new three-engine wallet preview checks passed again after the final frontend
 change. One actual local Steward browser cycle also passed on the retained legacy
 route. Formatter, TypeScript and Git whitespace checks passed. The new read-only
 HTTP endpoints returned 200 for both directions. The preview remains on port 8745.
+
+
+## October 28 follow-up: calldata and isolated-fork execution
+
+`swap-plan.ts` constructs only the fixed USDG/QQQ pair and published SwapRouter02
+address. The output recipient is the connected wallet. New approvals grant the
+exact input amount, with a zero reset when replacing an insufficient nonzero
+allowance. An already sufficient allowance is reused; Blunts does not create a
+new unlimited approval. Swaps use `exactInputSingle` inside deadline-protected
+`multicall`, zero ETH value, and the displayed 0.5% output floor. Expired or
+inconsistent plans are rejected. No fee transfer is included in this preview.
+
+The new **Review wallet steps** action independently rechecks chain, pool,
+input balance/decimals, router existence, allowance and current on-chain output.
+A changed wallet/amount invalidates the review. The UI displays only the planned
+steps; it never imports the fork writer or requests a wallet transaction.
+
+`swap-journal.ts` stores an immutable sender/nonce/call before a wallet can
+broadcast. Lost responses and post-broadcast storage failure preserve a blocking
+attempt instead of authorizing retries. Receipt recovery compares sender,
+recipient contract, calldata, nonce, zero ETH value and canonical block hash.
+Transient RPC failure preserves prior proof instead of inventing a reorg. The
+engine is currently **fork-only**, with hard chain-31337 checks on both read and
+wallet transports and explicit chain 31337 in every outgoing wallet request.
+It cannot be enabled for mainnet by an environment variable. Browser activity UI
+and a reviewed mainnet execution policy are separate unfinished work.
+
+### Actual fork receipt
+
+Anvil 1.7.1 forked Robinhood block **99980889** into isolated chain **31337** on
+loopback port 8752, with no generated wallet accounts. The qualification script
+impersonated disposable accounts only inside that fork and seeded virtual USDG
+and ETH there. It never forwarded transaction writes to the public chain and
+never accessed the owner's wallet or keys.
+
+The deployed USDG, QQQ and Uniswap contracts completed a 25-USDG buy and a sale
+of all received QQQ. Four local wallet requests confirmed; QQQ returned to zero
+and the newly granted buy allowance was consumed to zero. The journal was
+serialized/reloaded between steps. A fifth local request deliberately lost its
+response **after** its approval transaction mined. The reloaded journal retained
+`unknown` without a hash and blocked another submit. This is local-fork contract
+execution evidence, not mainnet trading, eligibility, finality or bank cash-out.
+
+Private ignored receipts: `data/review-20261028/evm/fork-cycle.json` (first cycle)
+and `fork-cycle-1793181003531.json` (cycle plus actual lost-response test). The
+latter cycle began with 99.975004 virtual USDG and ended with 99.950007; these are
+disposable fork balances, not user funds or performance claims. Five serialized journal
+records were retained during the run. Browser review screenshots use a clearly separate fixture
+wallet, not these balances or the owner's wallet. The Anvil process was stopped
+after the receipts were saved.
+
+The public RPC rejected the first historical-block fork because its historical
+state was pruned. A fresh fork succeeded. To reproduce, start a fresh fork and
+run the bounded script promptly; reusing an old block may require an archival
+RPC that is not configured or purchased here:
+
+```sh
+npm exec --yes --package=@foundry-rs/anvil@1.7.1 -- anvil \
+  --fork-url https://rpc.mainnet.chain.robinhood.com --chain-id 31337 \
+  --accounts 0 --host 127.0.0.1 --port 8752 --no-storage-caching
+# In another terminal:
+npx tsx scripts/qualify-evm-fork.ts
+```
+
+Focused tests cover malformed/expired/altered plans, exact approvals, mainnet
+refusal, changed wallet/call, storage failure before/after broadcast, concurrent
+submits, unknown-response reload, receipt mismatch, canonical-block changes and
+RPC outages. Browser tests verify that preparing/reviewing invokes no wallet
+sign/send method. Desktop Chromium, mobile Chromium and WebKit passed.
+
+
+Follow-up validation: full backend suite **47 passed, one optional PostgreSQL
+skip**; focused wallet/calldata/recovery cases **5 passed**; wallet browser review
+**3/3 passed**. Build, TypeScript (now including the fork script), formatting and
+whitespace checks passed. The fork-writer guard string is absent from built
+browser assets. Browser activity persistence and mainnet signing remain unfinished;
+the serializable journal was qualified with disposable test storage, not an owner
+browser restart or real wallet. The local preview remains on port 8745.

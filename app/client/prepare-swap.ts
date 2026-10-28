@@ -1,0 +1,79 @@
+import { parseAbi, type Address } from "viem";
+import {
+  stock,
+  cash,
+  dex,
+  quoteAbi,
+  tokenAbi,
+  type SwapQuote,
+} from "../shared/robinhood";
+import { approvalAbi, swapPlan } from "../shared/swap-plan";
+import { chainReader } from "./chain";
+/** Fresh independent chain checks before showing wallet steps. No wallet writes.
+ * The optional reader supports isolated-fork qualification, never URL input. */
+export async function prepareSwap(
+  quote: SwapQuote,
+  owner: Address,
+  reader = chainReader,
+  expectedChain = 4663,
+) {
+  if ((await reader.getChainId()) !== expectedChain)
+    throw Error("Chain verification failed.");
+  const input = quote.side === "fill" ? cash : stock,
+    output = quote.side === "fill" ? stock : cash;
+  const [allowance, balance, decimals, routerCode, pool] = await Promise.all([
+    reader.readContract({
+      address: input.address,
+      abi: approvalAbi,
+      functionName: "allowance",
+      args: [owner, dex.router],
+    }),
+    reader.readContract({
+      address: input.address,
+      abi: tokenAbi,
+      functionName: "balanceOf",
+      args: [owner],
+    }),
+    reader.readContract({
+      address: input.address,
+      abi: tokenAbi,
+      functionName: "decimals",
+    }),
+    reader.getCode({ address: dex.router }),
+    reader.readContract({
+      address: dex.factory,
+      abi: parseAbi([
+        "function getPool(address,address,uint24) view returns(address)",
+      ]),
+      functionName: "getPool",
+      args: [input.address, output.address, quote.fee],
+    }),
+  ]);
+  const plan = swapPlan(quote, owner, allowance);
+  if (
+    decimals !== input.decimals ||
+    !routerCode ||
+    routerCode === "0x" ||
+    pool.toLowerCase() !== quote.pool.toLowerCase()
+  )
+    throw Error("Token or pool verification failed.");
+  if (balance < plan.amountIn)
+    throw Error(`Not enough ${input.symbol} in this wallet.`);
+  const simulated = await reader.simulateContract({
+    address: dex.quoter,
+    abi: quoteAbi,
+    functionName: "quoteExactInputSingle",
+    args: [
+      {
+        tokenIn: input.address,
+        tokenOut: output.address,
+        amountIn: plan.amountIn,
+        fee: quote.fee,
+        sqrtPriceLimitX96: 0n,
+      },
+    ],
+  });
+  if (simulated.result[0] < plan.minimumOut)
+    throw Error("Price moved beyond your limit. Preview again.");
+  return plan;
+}

@@ -15,6 +15,8 @@ Connect an injected EVM wallet to read its QQQ/USDG balances. Fill previews a
 USDG → QQQ swap; Spark previews QQQ → USDG. Public issuer and chain data supply
 quotes and valuations. No simulated $500 balance is added to a connected wallet.
 No seed phrase, private key, wallet approval or signature is requested.
+**Review wallet steps** checks the live pool, balance and allowance before showing
+finite approval and deadline-protected swap calldata. It remains a read-only review.
 
 The quote path reads direct Uniswap pools. It does not submit swaps or withdraw
 dollars to a bank. Robinhood Stock Tokens carry issuer/jurisdiction restrictions,

@@ -16,6 +16,7 @@
     "app",
     "vite.config.ts",
     "playwright*.config.ts",
-    "capacitor.config.ts"
+    "capacitor.config.ts",
+    "scripts/**/*.ts"
   ]
 }

@@ -16,6 +16,13 @@ below. No deployment, real-money transaction or publishing is approved.
   after stopping the preview. Never reset/clean data to switch versions.
 - Read [wallet-first implementation](evm-robinhood.md) for current proof and gaps.
 
+Latest follow-up adds exact approval/swap calldata and **Review wallet steps**
+with independent public-chain preflight. A fork-only journal/executor completed
+a buy/sell cycle and an actual lost-response/no-replay case on Anvil chain 31337.
+No owner wallet or mainnet funds were used. Read `docs/evm-robinhood.md` for the
+exact receipts and remaining gates. The public app still never signs or sends;
+its fork-only test writer is not bundled. Anvil was stopped after qualification.
+
 The historical checkpoint below is preserved for recovery, not the active plan.
 
 ---
