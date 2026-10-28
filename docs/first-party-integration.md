@@ -105,6 +105,31 @@ This proves the actual service transport, wallet provisioning, identity/session
 handling and a simulated financial cycle; it does not prove external email
 delivery or a live financial integration.
 
+For unattended browser acceptance, keep that isolated service running, build
+Blunts, then run:
+
+```sh
+npm run build
+TEST_STEWARD_URL=http://127.0.0.1:8743 npm run test:local-services
+```
+
+This separate Playwright configuration starts Blunts on loopback port 8750 with
+its own database, ephemeral session-encryption key and actual Steward BFF. It
+binds only to loopback and refuses remote issuers. Before any
+email request, the test checks the synthetic address's inbox for the specific
+test-only empty-inbox response. A disabled inbox route fails the test instead
+of attempting delivery. It uses random `example.test` addresses and reads only
+their isolated mock inboxes; it never reads the owner's mailbox or changes
+Voice Control/microphone settings. No provider API calls or real money are
+involved. HTTP traces are disabled for these real local test sessions.
+
+The scenario covers email-code request/resend, sign-in, sandbox onboarding,
+Steward wallet creation, reload continuity, Fill/Spark/payout to zero, sign-out,
+and a second sign-in to the same identity and wallet. This is a first-party
+service acceptance path, not Dinari/MoonPay acceptance. It runs on desktop
+Chromium, mobile Chromium and WebKit independently of the demo-auth browser
+suite.
+
 Transport budget: one fixed upstream request, 15-second timeout and a hard
 128-KiB body bound. A Cloud app-to-personal exchange can require one failed
 scope check, one refresh and one verified identity check. Normal account reads

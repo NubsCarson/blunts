@@ -72,6 +72,8 @@ npm run build
 npm test
 npx playwright install chromium webkit
 npm run test:e2e
+# With the isolated mock-email Steward service running (see integration guide):
+npm run test:local-services
 python3 -m unittest discover -s tests
 node --test tests/prototype.test.cjs
 npm audit

@@ -81,6 +81,20 @@ does not specify a repository license.
 
 ## Verified checks
 
+- Unattended real-service acceptance: `npm run test:local-services` passed on
+  desktop Chromium, mobile Chromium and WebKit (three full-cycle scenarios,
+  50.7 seconds). Each uses actual local Steward/API/database, the test-only mock
+  inbox and a unique synthetic address: email request/resend, sign-in, sandbox
+  onboarding, provider-provisioned wallet, reload continuity, $100 Fill → $99
+  investment → $98.01 sale → settled payout to zero, sign-out and sign-in to
+  the same subject/handle/wallet with the same four completed intents. Server
+  cash, units and completed states are checked independently of the available
+  cash displayed in the tray. No owner email, microphone, manual verification,
+  external financial provider or real funds were used. Initial harness runs
+  exposed two incorrect test assumptions (manual wallet creation and zero
+  available cash equaling settled cash); both were corrected before the final
+  three-engine pass. The build and formatting checks passed. Screenshots and
+  a receipt are preserved under ignored `data/review-20261027/`.
 - October 27 sign-in recovery follow-up: nine targeted browser checks passed
   across desktop Chromium, mobile Chromium and WebKit for an unanswered request
   reaching the browser's own timeout, expired-code recovery, failed/successful
