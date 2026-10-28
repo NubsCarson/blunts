@@ -238,3 +238,40 @@
   padding-top: 0;
   margin-top: 0;
 }
+.evm-step-details {
+  margin: 16px 0;
+}
+.evm-step-details summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--paper);
+  font-size: 13px;
+}
+.evm-step-details dl {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.evm-step-details dt {
+  color: var(--dim);
+  margin-top: 12px;
+}
+.evm-step-details dd {
+  margin: 3px 0 0;
+}
+.evm-step-details section {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: 16px;
+}
+.evm-step-details h3 {
+  font-size: 14px;
+}
+.evm-step-details code {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.evm-step-details a {
+  min-height: 32px;
+}

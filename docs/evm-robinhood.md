@@ -446,3 +446,27 @@ entry retained the same `index-CEZqcSO2.js` output because the dormant execution
 adapter/writer is not imported by the UI. A build-content check found no executor
 chain-approval error string. Formatting and whitespace checks passed. These
 checks do not replace the explicit missing real-wallet/mobile/finality receipts.
+
+## Exact transaction review
+
+Prepared wallet steps now include an optional **Review exact transaction details**
+disclosure. It shows chain 4663, connected wallet, zero ETH call value (network
+fees separate), token/spender addresses, exact approval amounts, swap input,
+minimum output, own-wallet recipient, deadline and pool fee. Contract links point
+to the fixed Robinhood explorer. An expired or mismatched plan cannot be presented
+as a current prepared request. No wallet request is opened by this disclosure.
+
+Display and executor now share `verifiedSwapPlan`, which reconstructs canonical
+calldata and compares the plan ID, chain, token pair, atomic input/minimum and all
+calls. Tests reject altered semantic/display metadata as well as changed calldata;
+this prevents a readable review from describing different limits than the request.
+This is a review surface, not enabled wallet confirmation or mainnet acceptance.
+The source-disabled execution policy and absent UI submission controls remain.
+
+Exact-review validation completed: **64 backend tests passed, two optional
+integrations skipped**, and **six browser cases passed** across Chromium, mobile
+Chromium and WebKit. Browser assertions open the disclosure and check network,
+zero ETH call value, exact 25-USDG approval and the fixed spender explorer link,
+then verify only connection/read wallet methods occurred. Build/typecheck,
+formatting, whitespace and the UI detector passed. No real-wallet request, native
+build, new fork execution, activation or deployment is claimed for this UI change.

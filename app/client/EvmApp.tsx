@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { HowItWorks } from "./HowItWorks";
+import { WalletStepDetails } from "./WalletStepDetails";
 import { Tray } from "./Tray";
 import {
   robinhood,
@@ -710,6 +711,10 @@ export function EvmApp() {
                           </li>
                         ))}
                       </ol>
+                      <WalletStepDetails
+                        plan={prepared}
+                        expired={clock >= quote.expiresAt}
+                      />
                       {stepFee?.status === "needs_eth" && (
                         <p>
                           Add ETH on Robinhood Chain for network fees. Your

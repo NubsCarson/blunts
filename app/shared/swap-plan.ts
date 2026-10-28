@@ -142,3 +142,27 @@ export function swapPlan(
     calls,
   };
 }
+
+/** Reconstruct every byte and semantic field before display or execution. */
+export function verifiedSwapPlan(plan: SwapPlan): SwapPlan {
+  const canonical = swapPlan(
+    plan.quote,
+    plan.owner,
+    plan.calls[0]?.kind === "reset"
+      ? 1n
+      : plan.calls[0]?.kind === "approve"
+        ? 0n
+        : plan.amountIn,
+  );
+  if (
+    canonical.id !== plan.id ||
+    plan.chainId !== canonical.chainId ||
+    plan.amountIn !== canonical.amountIn ||
+    plan.minimumOut !== canonical.minimumOut ||
+    plan.tokenIn.toLowerCase() !== canonical.tokenIn.toLowerCase() ||
+    plan.tokenOut.toLowerCase() !== canonical.tokenOut.toLowerCase() ||
+    JSON.stringify(canonical.calls) !== JSON.stringify(plan.calls)
+  )
+    throw Error("Wallet plan was changed. Prepare again.");
+  return canonical;
+}

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { type Address, type Hex } from "viem";
-import { swapPlan, type SwapPlan } from "./swap-plan.js";
+import { verifiedSwapPlan, type SwapPlan } from "./swap-plan.js";
 const hex = z.string().regex(/^0x(?:[0-9a-fA-F]{2})*$/);
 const hash = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
@@ -137,23 +137,6 @@ export type ExecutionReader = {
     value: bigint;
   }): Promise<unknown>;
 };
-function verifyExecutionPlan(plan: SwapPlan) {
-  const canonical = swapPlan(
-    plan.quote,
-    plan.owner,
-    plan.calls[0]?.kind === "reset"
-      ? 1n
-      : plan.calls[0]?.kind === "approve"
-        ? 0n
-        : plan.amountIn,
-  );
-  if (
-    canonical.id !== plan.id ||
-    JSON.stringify(canonical.calls) !== JSON.stringify(plan.calls)
-  )
-    throw Error("Wallet plan was changed. Prepare again.");
-  return canonical;
-}
 export type ExecutionPolicy = {
   chainId: 4663 | 31337;
   enabled: boolean;
@@ -178,7 +161,7 @@ export async function submitSwapStep(
   )
     throw Error("Wallet execution is disabled or missing required preflight.");
   return locked(async () => {
-    const canonical = verifyExecutionPlan(plan);
+    const canonical = verifiedSwapPlan(plan);
     if (
       journal.chainId !== policy.chainId ||
       (await reader.getChainId()) !== policy.chainId ||
@@ -254,7 +237,7 @@ export async function submitSwapStep(
     if (plan.quote.expiresAt <= Date.now())
       throw Error("Quote expired. Prepare again.");
     if (
-      verifyExecutionPlan(plan).id !== canonical.id ||
+      verifiedSwapPlan(plan).id !== canonical.id ||
       JSON.stringify(call) !== JSON.stringify(canonical.calls[step])
     )
       throw Error("Wallet plan changed during preflight. Prepare again.");

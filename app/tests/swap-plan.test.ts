@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { decodeFunctionData, getAddress, type Address, type Hex } from "viem";
-import { swapPlan, approvalAbi, routerAbi } from "../shared/swap-plan.js";
+import {
+  swapPlan,
+  approvalAbi,
+  routerAbi,
+  verifiedSwapPlan,
+} from "../shared/swap-plan.js";
 import {
   SwapJournal,
   submitSwapStep,
@@ -272,4 +277,21 @@ test("receipt recovery verifies sender, nonce and calldata; RPC outage does not 
     "mismatch",
   );
   assert.throws(() => f.journal.save({ ...confirmed, nonce: 8 }));
+});
+
+test("review and execution share semantic plan verification, including display-only metadata", () => {
+  const p = swapPlan(quote(), owner, 0n);
+  assert.equal(verifiedSwapPlan(p).id, p.id);
+  for (const change of [
+    { amountIn: 1n },
+    { minimumOut: 1n },
+    { chainId: 1 },
+    { tokenIn: stock.address },
+    { tokenOut: cash.address },
+    { owner: stock.address },
+  ])
+    assert.throws(() => verifiedSwapPlan({ ...p, ...change } as typeof p));
+  const mutated = { ...p, calls: p.calls.map((call) => ({ ...call })) };
+  mutated.calls[0].data = "0x00";
+  assert.throws(() => verifiedSwapPlan(mutated));
 });

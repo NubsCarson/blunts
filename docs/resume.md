@@ -310,3 +310,8 @@ source block 100034744 passed reset/approve/buy/sell plus unknown-response recov
 The fork node was stopped; no real-wallet or mainnet execution was performed.
 The adapter still needs owner-approved activation and visible confirmation UX;
 its source file existing is not proof of enabled or accepted mainnet trading.
+
+Latest local UI work adds optional exact transaction review to prepared steps.
+Display and execution share canonical semantic/calldata verification; changed
+chain/token/amount/minimum/calls fail review. It shows spender, recipient, deadline
+and fee details without opening wallet requests. Mainnet activation is still off.

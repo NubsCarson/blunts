@@ -215,6 +215,29 @@ test("wallet-first preview connects without signup, reads balances and never sen
   await expect(
     page.getByText(/Your ETH balance covers this estimate/),
   ).toBeVisible();
+  await page
+    .getByText("Review exact transaction details", { exact: true })
+    .click();
+  await expect(
+    page.getByText("Robinhood Chain · 4663", { exact: true }),
+  ).toBeVisible();
+  const firstStep = page.getByRole("region", { name: "Transaction step 1" });
+  await expect(firstStep.getByText("25 USDG", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("0 ETH · network fees are separate", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    firstStep
+      .getByRole("link")
+      .filter({ hasText: "0xcaf681a66d020601342297493863e78c959e5cb2" }),
+  ).toHaveAttribute(
+    "href",
+    "https://robinhoodchain.blockscout.com/address/0xcaf681a66d020601342297493863e78c959e5cb2",
+  );
+  await page
+    .getByText("Review exact transaction details", { exact: true })
+    .click();
+
   await page.screenshot({ path: info.outputPath("prepared-wallet-steps.png") });
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.screenshot({ path: info.outputPath("evm-wallet-tray.png") });
