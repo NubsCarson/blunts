@@ -1,7 +1,7 @@
 import Dinari from "@dinari/api-sdk";
 import { z } from "zod";
+import { dinariSandboxClient } from "./provider-transport.js";
 
-const SANDBOX = "https://api-enterprise.sandbox.dinari.com";
 const entitySchema = z.object({
   id: z.string().min(1),
   entity_type: z.enum(["ORGANIZATION", "INDIVIDUAL"]),
@@ -66,31 +66,7 @@ export async function qualifyDinariSandbox(
   ];
   if (missing.length)
     return { ...base, status: "missing_credentials", missing };
-  const client = new Dinari({
-    apiKeyID: credentials.keyId!,
-    apiSecretKey: credentials.secretKey!,
-    // Explicit null prevents DINARI_BASE_URL from overriding the sandbox.
-    baseURL: null,
-    environment: "sandbox",
-    maxRetries: 0,
-    timeout: 10000,
-    logLevel: "off",
-    fetch: async (input, init) => {
-      const url = new URL(
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.href
-            : input.url,
-      );
-      if (
-        url.origin !== SANDBOX ||
-        (init?.method ?? "GET").toUpperCase() !== "GET"
-      )
-        throw new Error("Unexpected provider qualification request");
-      return transport(input, { ...init, redirect: "error" });
-    },
-  });
+  const client = dinariSandboxClient(credentials, transport);
   try {
     const entity = entitySchema.safeParse(
       await client.v2.entities.retrieveCurrent(),

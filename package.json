@@ -19,6 +19,7 @@
     "format:check": "prettier --check app vite.config.ts playwright*.config.ts tsconfig.json package.json .github/workflows/checks.yml capacitor.config.ts scripts",
     "ops": "tsx app/server/ops.ts",
     "providers:check": "tsx app/server/qualify-providers.ts",
+    "providers:workbench": "tsx app/server/provider-workbench.ts",
     "mobile:sync": "node scripts/mobile.mjs",
     "android:debug": "cd android && ./gradlew assembleDebug",
     "android:bundle": "cd android && ./gradlew bundleRelease",

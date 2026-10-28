@@ -22,6 +22,11 @@ import {
   returnIntent,
 } from "./domain.js";
 import { KINDS } from "../shared/money.js";
+import {
+  registerProviderSandbox,
+  type ProviderSandboxOptions,
+} from "./provider-sandbox-api.js";
+import { ProviderFault } from "./provider-transport.js";
 const credentials = z
   .object({
     handle: z
@@ -39,6 +44,7 @@ export interface AppOptions {
   serveStatic?: boolean;
   logger?: boolean;
   steward?: StewardConfig;
+  providerSandbox?: ProviderSandboxOptions;
 }
 export async function createApp(options: AppOptions) {
   if ((options.mode ?? "simulation") !== "simulation")
@@ -59,6 +65,7 @@ export async function createApp(options: AppOptions) {
           redact: [
             "req.headers.cookie",
             "req.headers.authorization",
+            'req.headers["moonpay-signature-v2"]',
             "req.body",
             "res.headers.set-cookie",
           ],
@@ -167,6 +174,20 @@ export async function createApp(options: AppOptions) {
     );
   }
   app.setErrorHandler((error, req, reply) => {
+    if (error instanceof ProviderFault)
+      return reply
+        .code(
+          error.kind === "configuration"
+            ? 503
+            : error.kind === "invalid_input"
+              ? 400
+              : error.kind === "rejected"
+                ? 403
+                : ["mismatch", "ambiguous"].includes(error.kind)
+                  ? 409
+                  : 502,
+        )
+        .send({ error: error.message });
     if (error instanceof ZodError)
       return reply.code(400).send({
         error: error.issues
@@ -197,6 +218,16 @@ export async function createApp(options: AppOptions) {
   const authConfig = {
     config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
   };
+  if (options.providerSandbox) {
+    const parsedOrigin = new URL(origin);
+    requireThat(
+      parsedOrigin.protocol === "http:" &&
+        ["localhost", "127.0.0.1"].includes(parsedOrigin.hostname),
+      "Provider sandbox routes are loopback-only.",
+      500,
+    );
+    await registerProviderSandbox(app, options.providerSandbox, session);
+  }
   app.get("/api/auth/config", async () => ({
     provider: steward ? (options.steward?.provider ?? "steward") : "demo",
     moneyMode: "simulation",

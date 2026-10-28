@@ -248,13 +248,24 @@ host's secret manager and grant the deployment identity scoped access.
   organization account, role access, bundle/package ownership and signing assets.
 - Hosting/managed PostgreSQL/backup/monitoring accounts and production budget.
 
-Provider credentials do not enable financial execution. `DINARI_API_KEY_ID` and
-`DINARI_API_SECRET_KEY` are consumed only by the read-only sandbox qualifier:
-`npm run providers:check`. It checks the authenticated partner and requested QQQ
-instrument through the official SDK, makes no mutations, and never reports live
-acceptance. Missing configuration exits 2 without network requests. Real orders,
-funding and settlement remain unimplemented. No MoonPay credentials are consumed
-yet. The first-party auth settings above are consumed by the application.
+Provider credentials do not enable financial execution. The local
+[provider workbench](docs/provider-sandbox-workbench.md) now implements MoonPay
+test checkout signing, buy quotes, transaction lookup and authenticated webhook
+ingestion, plus Dinari external-wallet eligibility checks, unsigned permit
+preparation and request/order tracking. Its local-only API requires an active
+first-party wallet and explicit `PROVIDER_SANDBOX=1`; it is off by default and
+does not alter the tray's simulated ledger. The operator CLI and API preserve
+unknown commands instead of repeating a possibly accepted POST.
+
+`npm run providers:check` reports both providers: Dinari partner/QQQ reads and a
+MoonPay test buy-quote read. Without the required keys it makes no network calls
+and exits 2. Keys are process environment only; see the workbench guide for the
+five variable names and private customer-binding file. No genuine provider keys
+have been supplied or qualified. Signed order submission, accepted customer
+onboarding/signing, actual funding/payout and chain/ledger settlement remain
+unfinished. The inspected Steward source explicitly rejects permit-style
+signing; a scoped accepted signing path must be implemented, not enabled through
+unsafe flags. The first-party auth settings above are consumed by the app.
 The current [sandbox acceptance requirements](docs/provider-sandbox-acceptance.md)
 record an important funding-token/network mismatch in the public sandbox docs;
 the two providers cannot yet be claimed as one verified funding/investment loop.

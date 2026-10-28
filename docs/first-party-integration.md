@@ -123,6 +123,15 @@ their isolated mock inboxes; it never reads the owner's mailbox or changes
 Voice Control/microphone settings. No provider API calls or real money are
 involved. HTTP traces are disabled for these real local test sessions.
 
+The current test also opts into the local provider API with explicitly invalid
+synthetic MoonPay keys. It constructs a test URL and replays a locally signed
+callback through the actual HTTP server, verifying that neither callback nor
+replay credits the app. It never opens that URL or sends those keys to MoonPay.
+Inherited Dinari credentials/bindings are cleared in the test child process.
+When the shared loopback issuer throttles the Fill request, the test performs
+one 60-second backoff and reloads to recover the existing instruction. It keeps
+the issuer's rate limits intact and still requires four settled intents.
+
 The scenario covers email-code request/resend, sign-in, sandbox onboarding,
 Steward wallet creation, reload continuity, Fill/Spark/payout to zero, sign-out,
 and a second sign-in to the same identity and wallet. This is a first-party
@@ -191,6 +200,11 @@ query. It rejects non-partner identities and malformed/duplicate instrument
 responses, and checks tradability, fractional support and an Arbitrum Sepolia
 token mapping. These checks do not establish customer eligibility, production
 support, fee approval, funding acceptance, or successful orders/settlement.
+
+Its output now contains separate Dinari and MoonPay results; MoonPay additionally
+performs a test buy-quote GET only when all required keys are present. The new
+[provider workbench](provider-sandbox-workbench.md) describes the separate local
+HTTP/CLI adapters and their remaining signing, onboarding and settlement gates.
 
 The endpoint is pinned to Dinari's sandbox even if `DINARI_BASE_URL` is set;
 redirects, automatic retries and SDK logging are disabled. The output contains

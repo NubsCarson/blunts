@@ -38,6 +38,11 @@ Upstream has no open issues or pull requests as observed on October 27.
 
 ## Local changes
 
+- Add a separate local-only Dinari/MoonPay workbench: signed test checkout URLs,
+  buy quotes, transaction/request/order lookup, exact-decimal validation, raw-body
+  callback authentication, durable prepare/unknown records and event deduplication.
+  Sandbox API requests are bound to the current first-party user/wallet and use
+  server-side Dinari account mappings. The tray's money remains simulated.
 - Complete the previously inaccessible cash-out UI using the existing quote and
   payout intent API. A cash-only account can now reach a zero balance and closure.
 - Keep the payout quote and idempotency key across close/reload/network failures;
@@ -81,6 +86,27 @@ does not specify a repository license.
 
 ## Verified checks
 
+- Provider workbench follow-up: the full backend run passed 40 tests with one
+  optional PostgreSQL case skipped, including the actual local Steward service.
+  The 14 provider-focused cases passed again after the final reconciliation race
+  and US-account eligibility checks. Coverage includes the official MoonPay HMAC
+  vector, quote totals/expiry, precision, wrong owner/wallet/currency/amount,
+  duplicate identifiers, raw-byte signatures, stale callbacks, process restart,
+  abandoned/concurrent preparation, observation ordering, and no ledger credit.
+- The expanded unattended browser test passed all three engines in 1.9 minutes:
+  actual main-process sandbox routes, genuine local Steward login, locally
+  generated test URL, synthetic authenticated callback/replay, unchanged app
+  balances, then the original demo cycle and same-wallet re-login. No placeholder
+  key was sent to an external provider. WebKit took one bounded issuer-rate-limit
+  backoff and recovered the saved Fill. A test-runner hard stop initially left
+  the deliberate crash lock; its recorded process was confirmed dead, only that
+  stale lock was removed, and graceful test-server shutdown was configured. No
+  journal was removed and no security/rate limit was relaxed.
+- Fresh provider-access check: both developer portals are signed out and the
+  credential qualifier reports both sets of sandbox keys missing. No external
+  provider project, permit, order, checkout session or settlement was accepted.
+  Inspected local Steward source rejects permit-style signing; this is a real
+  integration boundary, not a missing feature flag to turn on unsafely.
 - Unattended real-service acceptance: `npm run test:local-services` passed on
   desktop Chromium, mobile Chromium and WebKit (three full-cycle scenarios,
   50.7 seconds). Each uses actual local Steward/API/database, the test-only mock

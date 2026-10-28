@@ -38,6 +38,15 @@ when configured. Its `sandbox_reads_verified` result intentionally does not
 approve a customer, enable trading, establish the funding route or permit live
 money. Without keys it makes no requests and exits 2.
 
+The later local [provider workbench](provider-sandbox-workbench.md) adds a
+read-only MoonPay quote qualifier, signed test URLs, transaction lookup,
+raw-body V2 callback authentication, durable command/event records and
+first-party authenticated sandbox API routes. Dinari can now prepare unsigned
+external-wallet permits and track request/order states. These paths passed local
+contract/recovery checks; no enabled external project or actual provider cycle
+was exercised. They never credit the simulated app ledger. The original
+read-only qualifier is no longer the only code that can consume provider keys.
+
 ## Implementation constraints from current provider docs
 
 [MoonPay's URL signing contract](https://dev.moonpay.com/widget/on-ramp/customization/url-signing)
@@ -72,7 +81,8 @@ financial account opening and binding agreements retain their separate action
 boundaries. Provider eligibility and commercial terms
 must be reviewed by their owner. Store issued credentials in the selected secret
 manager, never in chat or Git. No keys, trades, checkout sessions, paid plans or
-live financial accounts were created. Email verification and the remaining
+live financial accounts were created. Later local URL/callback rehearsals did
+not create an external provider checkout session. Email verification and the remaining
 provider onboarding steps are not established by submission of the signup form.
 
 The developer login screens were rechecked for an accessible alternative:
