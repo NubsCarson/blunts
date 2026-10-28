@@ -42,7 +42,8 @@ The quote path reads direct Uniswap pools. It does not submit swaps or withdraw
 dollars to a bank. Robinhood Stock Tokens carry issuer/jurisdiction restrictions,
 including exclusion of US persons; wallet connection is not eligibility approval.
 
-See [implementation, verified contracts and remaining work](docs/evm-robinhood.md)
+See [current local acceptance and unfinished work](docs/local-wallet-acceptance.md),
+[implementation and verified contracts](docs/evm-robinhood.md)
 and [resume notes](docs/resume.md).
 
 ## Verification

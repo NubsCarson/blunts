@@ -1,3 +1,27 @@
+# Current acceptance map — latest October 28
+
+Read [local wallet acceptance](local-wallet-acceptance.md) first. It consolidates
+current source `38fef72`, actual browser/Android/iOS receipts, the approved 1%
+fee, preserved provider history, and open native-wallet/mainnet/release work.
+The latest checks pass: 78 tests/two optional skips, 36 browser cases, formatting;
+Android debug and unsigned iOS Simulator builds pass with matching JS bundles.
+
+The new first-use network flow offers Add Robinhood Chain after error 4902, shows
+fixed official metadata and handles cancellation. Adding never automatically
+requests a subsequent switch or transaction. Android native market/quote transport
+and the original GPU-rendered tray were observed in a dedicated fresh emulator.
+The current iOS simulator read real market data and exposed a safe-area overlap;
+`38fef72` fixes it and the actual simulator screenshot confirms the correction.
+
+Current packages: `data/review-20261028/evm/current-native-checkpoint/`. Native
+signing/pairing is still absent and must not be described as completed. The next
+implementation question is a keyless native-wallet connection that respects the
+owner's local-only boundary. Mainnet holder execution, physical/hardware wallets
+and release acceptance also remain unproven. All personal financial actions and
+public deployment remain on hold.
+
+---
+
 # Actual installed MetaMask read-only qualification — latest October 28
 
 Source commit `91b507b` fixes the actual installed-wallet network-switch race.

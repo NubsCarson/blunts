@@ -1,5 +1,8 @@
 # Wallet-first Blunts — local implementation
 
+For the consolidated current receipts and unfinished work, read
+[local wallet acceptance](local-wallet-acceptance.md).
+
 **Current owner-approved scope:** local HTTP loopback web signing is enabled as
 recorded in the latest section. Hosted/native origins remain disabled and shipping
 still requires later approval. Both Fill and Spark now collect the owner-approved
@@ -974,3 +977,36 @@ bundles matched both packages. Private artifacts/checksums are preserved under
 `data/review-20261028/evm/wallet-live-native-checkpoint/`. Native signing remains
 disabled, the preview remains loopback-only, and shipping remains unapproved.
 The prior fee and native checkpoints remain intact.
+
+
+## First-use network setup and native runtime qualification
+
+`96ce00d` adds a separate, explicit Add Robinhood Chain action after wallet error
+4902. Metadata is fixed from the canonical chain definition, with no URL/storage
+overrides. Cancellation remains retryable. Adding does not imply switching; when
+the wallet stays on its previous chain the next Switch action is explicit. A
+local in-flight guard prevents concurrent network prompts. Browser fixtures
+verify the exact payload, cancellation, no automatic request chaining and correct
+network readback. No owner wallet network was removed merely to test addition.
+
+The dedicated Android emulator qualified the real native WebView, actual
+CapacitorHttp market/quote reads, net fee display and disabled signing. The original
+tray was verified in the native framebuffer; CDP's screenshot omitted GPU content.
+The harness `scripts/qualify-android-runtime.ts` targets only emulator-5580 with
+AVD name blunts_wallet_qa_20261028 and the separately established loopback WebView
+forward. Playwright's documented noDefaults option avoids browser-context
+management unsupported by WebView; it does not relax any app signing policy.
+Initial failed connection attempts and all native console warnings remain local.
+
+The current iOS simulator build loaded its WebView and returned a real 200 QQQ
+market response through CapacitorHttp. The first framebuffer exposed the network
+label overlapping the notched-screen counters. `38fef72` includes the safe-area
+inset in that label's top offset. The second actual simulator framebuffer shows
+clear separation and the original tray. Both native environments are stopped
+afterward. Only the task-created AVD/simulator were used, with no personal wallet.
+
+Final checks after the layout fix: 78 passed/two optional service skips, browser
+36 passed, formatting passed. Fresh Android debug and unsigned iOS Simulator
+builds passed, with nine JS bundles verified against both packages. Current
+artifacts, exact receipt paths and unresolved native-wallet/holder/release gates
+are listed in [local wallet acceptance](local-wallet-acceptance.md).

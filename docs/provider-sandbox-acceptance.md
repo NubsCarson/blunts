@@ -1,3 +1,13 @@
+# Active direction supersedes the provider-first plan
+
+The owner changed the active app to normal EVM wallet + Robinhood Chain. The
+provider work below remains preserved history, with real sandbox reads verified
+but no customer/order/funding/payout acceptance. Do not resume account creation
+or invent a combined provider financial cycle unless the owner returns to that
+architecture. Read [current local acceptance](local-wallet-acceptance.md).
+
+---
+
 # Provider sandbox acceptance — updated October 28, 2026
 
 ## Current receipt
