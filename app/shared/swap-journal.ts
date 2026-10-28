@@ -1,3 +1,4 @@
+import { finalityProof, finalityCheck } from "./finality.js";
 import { z } from "zod";
 import { type Address, type Hex } from "viem";
 import { verifiedSwapPlan, type SwapPlan } from "./swap-plan.js";
@@ -42,6 +43,8 @@ const attemptSchema = z
       })
       .strict()
       .optional(),
+    finality: finalityProof.optional(),
+    finalityCheck: finalityCheck.optional(),
     tracked: z.literal(true).optional(),
     observedAt: z.number().int().safe().nonnegative().optional(),
     checkedAt: z.number().int().safe().nonnegative().optional(),

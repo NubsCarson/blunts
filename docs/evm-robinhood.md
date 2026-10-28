@@ -832,3 +832,24 @@ This supersedes the earlier fixture-only limit specifically for **local-fork
 cancellation recovery**. Installed-wallet/hardware/mobile acceptance, real eligible
 holder/mainnet receipts, Ethereum finality, fee/business approval and public
 release approval remain separate unproven gates.
+
+
+## RPC finality observations — October 28
+
+Activity now checks the receipt's canonical block against ordered latest, safe
+and finalized RPC heads. It labels sequencer inclusion, RPC safe or RPC finalized
+separately. This trusts the RPC's tags; independent Ethereum batch proof and
+bank/bridge settlement are not established. An unavailable check preserves the
+prior proof and its timestamp; a canonical mismatch marks the record reorged.
+A changed receipt cannot reuse a proof for an earlier block.
+
+`npm run check`: 76 passed, two optional service skips. Browser suite: 24 passed.
+The six new tests cover tag boundaries, invalid heads, canonical contradiction,
+outage preservation, stale concurrent observations and stale proof rendering.
+One bounded public read-only qualification observed RPC-finalized status for an
+unrelated public transaction: `data/review-20261028/evm/public-finality-1793190684498.json`.
+It sent zero transactions and is not an owner trade acceptance receipt.
+
+Owner subsequently approved 1% Fill and Spark fees to public wallet
+`0x4a27c325De7629c6bBD187E1e456B56c82E73073`. Implementation and signed-fork
+fee verification remain the next work; this checkpoint still charges no app fee.

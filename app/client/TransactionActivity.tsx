@@ -1,3 +1,5 @@
+import { FinalityStatus } from "./FinalityStatus";
+import { checkActivityFinality } from "./activity-finality";
 import { useEffect, useRef, useState } from "react";
 import type { Address } from "viem";
 import {
@@ -70,7 +72,12 @@ export function TransactionActivity({ owner }: { owner: Address }) {
       const journal = new SwapJournal(window.localStorage, owner, 4663);
       await withActivityLock(journal.key, async () => {
         if (version !== epoch.current) return;
-        await trackWalletTransaction(hash.trim(), owner, journal);
+        const observed = await trackWalletTransaction(
+          hash.trim(),
+          owner,
+          journal,
+        );
+        await checkActivityFinality(observed, journal);
       });
       if (version === epoch.current) {
         setRecords(journal.read());
@@ -96,14 +103,17 @@ export function TransactionActivity({ owner }: { owner: Address }) {
       const journal = new SwapJournal(window.localStorage, owner, 4663);
       await withActivityLock(journal.key, async () => {
         if (version !== epoch.current) return;
+        let observed: SwapAttempt;
         if (record.replacement)
-          await trackWalletTransaction(
+          observed = await trackWalletTransaction(
             record.replacement.hash,
             owner,
             journal,
             chainReader,
           );
-        else await reconcileSwapAttempt(record, chainReader, journal);
+        else
+          observed = await reconcileSwapAttempt(record, chainReader, journal);
+        await checkActivityFinality(observed, journal);
       });
       if (version === epoch.current) setRecords(journal.read());
     } catch {
@@ -221,8 +231,8 @@ export function TransactionActivity({ owner }: { owner: Address }) {
                         </a>
                         <p>
                           Original request preserved. Review a fresh quote
-                          before another request. Ethereum finality has not been
-                          checked.
+                          before another request. Independent Ethereum finality
+                          is not verified here.
                         </p>
                         {!record.hash && (
                           <button
@@ -241,12 +251,7 @@ export function TransactionActivity({ owner }: { owner: Address }) {
                         verified state.
                       </p>
                     )}
-                    {record.state === "included" && (
-                      <p>
-                        Ethereum finality has not been checked. Bank or bridge
-                        withdrawals are separate.
-                      </p>
-                    )}
+                    <FinalityStatus record={record} />
                     {!record.hash && !record.replacement ? (
                       <p>
                         Find the hash in your wallet’s activity before trying

@@ -298,3 +298,14 @@
 .evm-signing .primary {
   margin-top: 16px;
 }
+.evm-finality {
+  margin: 14px 0;
+  font-size: 12px;
+}
+.evm-finality p {
+  font-size: 12px;
+}
+.evm-finality p:first-child {
+  font-weight: 700;
+  color: var(--gold);
+}

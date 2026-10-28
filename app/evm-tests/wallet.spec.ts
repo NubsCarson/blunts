@@ -309,7 +309,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
   ).toBeVisible();
   await expect(
     page.getByText(
-      "Ethereum finality has not been checked. Bank or bridge withdrawals are separate.",
+      "Based on this RPC’s block tags. Independent Ethereum batch/finality proof and bank or bridge settlement are not verified.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -323,6 +323,11 @@ test("wallet-first preview connects without signup, reads balances and never sen
   expect(exported.wallet.toLowerCase()).toBe(wallet.toLowerCase());
   expect(exported.records).toHaveLength(1);
   expect(exported.records[0].hash).toBe(trackedHash);
+  expect(exported.records[0].finality.level).toBe("rpc_finalized");
+  expect(exported.records[0].finality.transactionHash).toBe(trackedHash);
+  await expect(
+    page.getByText("RPC reports finalized", { exact: true }),
+  ).toBeVisible();
   expect(Object.keys(exported).sort()).toEqual(
     ["version", "chainId", "wallet", "exportedAt", "records"].sort(),
   );
