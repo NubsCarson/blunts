@@ -10,7 +10,7 @@ metadata:
     endpointslice.kubernetes.io/managed-by: blunts-deployment
 addressType: IPv4
 ports:
-  - { name: http, protocol: TCP, port: 8745 }
+  - { name: http, protocol: TCP, port: 8746 }
 endpoints:
-  - addresses: ["172.30.46.2"]
+  - addresses: ["172.30.46.1"]
     conditions: { ready: true }

@@ -5,65 +5,12 @@ metadata:
   labels:
     app.kubernetes.io/part-of: blunts
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: blunts
-  namespace: blunts
-spec:
-  replicas: 1
-  revisionHistoryLimit: 3
-  selector:
-    matchLabels: { app: blunts }
-  template:
-    metadata:
-      labels: { app: blunts }
-      annotations:
-        blunts.source-revision: a6625bd
-    spec:
-      automountServiceAccountToken: false
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        seccompProfile: { type: RuntimeDefault }
-      containers:
-        - name: app
-          image: docker.io/library/blunts:web-a6625bd
-          imagePullPolicy: Never
-          ports: [{ name: http, containerPort: 8745 }]
-          env:
-            - { name: HOST, value: "0.0.0.0" }
-            - { name: PORT, value: "8745" }
-            - { name: APP_ORIGIN, value: "https://blunt.nubs.site" }
-          resources:
-            requests: { cpu: 100m, memory: 128Mi }
-            limits: { cpu: "1", memory: 512Mi }
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities: { drop: [ALL] }
-          volumeMounts: [{ name: tmp, mountPath: /tmp }]
-          readinessProbe:
-            httpGet: { path: /api/health, port: http }
-            initialDelaySeconds: 3
-            periodSeconds: 10
-          livenessProbe:
-            httpGet: { path: /api/health, port: http }
-            initialDelaySeconds: 20
-            periodSeconds: 30
-      volumes:
-        - name: tmp
-          emptyDir: { sizeLimit: 128Mi }
----
 apiVersion: v1
 kind: Service
 metadata:
   name: blunts
   namespace: blunts
 spec:
-  selector: { app: blunts }
   ports: [{ name: http, port: 80, targetPort: http }]
   type: ClusterIP
 ---

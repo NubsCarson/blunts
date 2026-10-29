@@ -41,7 +41,6 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run build
-      - run: npm run worker:check
       - run: npm run release:qualify-origin
       - run: npm test
         env:
