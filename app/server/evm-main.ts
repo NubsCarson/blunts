@@ -1,14 +1,11 @@
 import { evmConfig } from "./evm-config.js";
 import { evmRateLimit } from "./evm-rate-limit.js";
-import { ReferenceGapError } from "../shared/reference-price.js";
-import { amountUnits } from "../shared/robinhood.js";
 import Fastify from "fastify";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import serveStatic from "@fastify/static";
 import { resolve } from "node:path";
-import { z } from "zod";
-import { market, quote } from "./robinhood.js";
+import { onchainResponse } from "./onchain-api.js";
 const { port, host, origin, execution, trustProxy } = evmConfig(process.env);
 const app = Fastify({
   trustProxy,
@@ -44,44 +41,11 @@ app.get("/api/health", async () => ({
   transactionsEnabled: execution.enabled,
   origin,
 }));
-app.get("/api/onchain/market", async (_, reply) => {
-  try {
-    return { ...(await market()), transactionsEnabled: execution.enabled };
-  } catch {
-    return reply
-      .code(503)
-      .send({ error: "QQQ market data is unavailable or stale. Try again." });
-  }
-});
-app.get("/api/onchain/quote", async (req, reply) => {
-  const input = z
-    .object({ side: z.enum(["fill", "spark"]), amount: z.string().max(32) })
-    .strict()
-    .safeParse(req.query);
-  if (!input.success)
-    return reply
-      .code(400)
-      .send({ error: "Choose Fill or Spark and a valid amount." });
-  try {
-    amountUnits(input.data.amount, input.data.side === "fill" ? 6 : 18);
-  } catch {
-    return reply
-      .code(400)
-      .send({ error: "Enter a positive amount with supported precision." });
-  }
-  try {
-    return {
-      ...(await quote(input.data.side, input.data.amount)),
-      transactionsEnabled: execution.enabled,
-    };
-  } catch (error) {
-    if (error instanceof ReferenceGapError)
-      return reply.code(409).send({ error: error.message });
-    return reply.code(503).send({
-      error:
-        "No verified quote is available for that amount. Try again or reduce the amount.",
-    });
-  }
+app.get("/api/onchain/*", async (req, reply) => {
+  const result = await onchainResponse(req.url.split("?")[0], req.query);
+  return reply
+    .code(result.status)
+    .send({ ...result.data, transactionsEnabled: execution.enabled });
 });
 await app.register(serveStatic, { root: resolve("dist") });
 app.setNotFoundHandler((req, reply) =>

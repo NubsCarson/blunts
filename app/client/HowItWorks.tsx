@@ -219,8 +219,8 @@ export function HowItWorks({
       <small>
         {mode === "wallet"
           ? signingEnabled
-            ? "Local signing · approve each wallet request"
-            : "Local preview · signing and swaps disabled"
+            ? "Wallet signing · approve each wallet request"
+            : "Read-only preview · signing and swaps disabled"
           : "Demo only · no real money or investments"}
       </small>
     </div>

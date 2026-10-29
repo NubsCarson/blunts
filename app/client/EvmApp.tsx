@@ -456,9 +456,9 @@ export function EvmApp() {
       ? import.meta.env.VITE_PUBLIC_APP_ORIGIN
       : window.location.origin,
   );
-  const signingEnabled = executionPolicyForOrigin(
-    window.location.origin,
-  ).enabled;
+  const signingEnabled =
+    executionPolicyForOrigin(window.location.origin).enabled &&
+    market?.transactionsEnabled === true;
   const rolled = (value ?? 0n) / 10000n;
   const short = account
     ? `${account.slice(0, 6)}…${account.slice(-4)}`
@@ -484,7 +484,7 @@ export function EvmApp() {
           <span>Robinhood Chain</span>
           <span>
             {signingEnabled
-              ? "Local signing · approve in wallet"
+              ? "Wallet signing · approve in wallet"
               : "Preview · signing disabled"}
           </span>
         </div>
@@ -887,7 +887,7 @@ export function EvmApp() {
                           ? "This plan expired. Preview again."
                           : signingEnabled
                             ? "Review each request in your wallet before approving."
-                            : "Review only. Signing stays disabled in this local build."}
+                            : "Review only. Wallet signing is disabled."}
                       </p>
                       {provider && (
                         <WalletSigning
@@ -906,7 +906,7 @@ export function EvmApp() {
               )}
               <p className="evm-note">
                 {signingEnabled
-                  ? "Local wallet signing is enabled. Approval or swap requests can move real funds only after you approve in your wallet."
+                  ? "Wallet signing is enabled. Approval or swap requests can move real funds only after you approve in your wallet."
                   : "Preview: wallet approvals and swaps are disabled. No funds will move."}
               </p>
               <p className="evm-fine">
