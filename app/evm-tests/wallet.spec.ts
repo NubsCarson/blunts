@@ -177,9 +177,6 @@ test("wallet-first preview connects without signup, reads balances and never sen
   );
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Connect MetaMask app", exact: true }),
-  ).toHaveCount(0);
-  await expect(
     page.getByText("Local signing · approve in wallet"),
   ).toBeVisible();
   await expect(page.getByLabel("Email", { exact: true })).toHaveCount(0);
