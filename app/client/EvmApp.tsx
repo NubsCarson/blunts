@@ -486,14 +486,6 @@ export function EvmApp() {
       </header>
       <main className="scene-main">
         <Tray value={String(value ?? 0n)} paused={panel !== null} />
-        <div className="evm-network">
-          <span>Robinhood Chain</span>
-          <span>
-            {signingEnabled
-              ? "Wallet signing · approve in wallet"
-              : "Preview · signing disabled"}
-          </span>
-        </div>
         <div className="scene-hud">
           <strong className="scene-value">
             {value === null ? "—" : usd(value)}
@@ -830,11 +822,6 @@ export function EvmApp() {
                     </>
                   ) : (
                     <>
-                      <p className="evm-purpose">
-                        {panel === "fill"
-                          ? "Turn your wallet balance into a stash of QQQ tokens."
-                          : "Sell QQQ tokens back into your wallet."}
-                      </p>
                       {restoredReview && (
                         <p role="status" className="evm-available">
                           Your saved amount is ready. Continue for a fresh
@@ -985,12 +972,6 @@ export function EvmApp() {
               {!signingEnabled && (
                 <p className="evm-fine">
                   Preview only. Wallet approvals and swaps are disabled.
-                </p>
-              )}
-              {!prepared && (
-                <p className="evm-fine">
-                  Uses funds already in your wallet. Bank deposits aren't
-                  connected.
                 </p>
               )}
               {!account && (

@@ -176,7 +176,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
     }),
   );
   await page.goto("/");
-  await expect(page.getByText("Preview · signing disabled")).toBeVisible();
+  await expect(page.locator(".evm-network")).toHaveCount(0);
   await expect(page.getByLabel("Email", { exact: true })).toHaveCount(0);
   await page
     .getByRole("button", { name: "Connect wallet", exact: true })
