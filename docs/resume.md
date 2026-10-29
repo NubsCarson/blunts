@@ -1,9 +1,35 @@
 # Current focus: Solana parity, token integration later
 
+Solana local flow is now implemented on `codex/solana-wallet-parity`.
+See [local qualification and remaining funded acceptance](solana-local.md).
+Run `npm run build` then `npm run start:solana`; preview is
+http://localhost:8753/sol. Separate loopback server, no deployment. Same scene,
+USDC/QQQx Fill/full-stash Spark, fixed fee, simulation, signature validation,
+durable activity and automatic finalized receipt observation are implemented.
+90 unit checks and 48 EVM browser regressions pass. Solana browser fixtures and
+live unsigned simulations are distinct from funded acceptance, which is still
+waiting for holder wallet confirmation. Never agent-confirm a personal trade.
+The local actual Chrome tab is 1728114627 (browser 4), Phantom wallet 3Bpjj…yc3Q.
+It had about 0.81 USDC, so prepare a 0.50 USDC test rather than the default 1.
+Do not deploy Solana until the owner approves. No source has been pushed.
+
 Owner explicitly requested the existing EVM wallet feature set on Solana next.
 Community-token integration is last. Owner chose **nubs.sol** for the 1% Solana
 fee recipient. Resolve it using SNS's validated resolver and pin the public key;
 do not use the Ethereum 0x fee address on Solana or invent a recipient.
+
+October 29 resolution check: official SNS SDK 4.0.1 rejects `.sol` after
+finalized slot 452825395; current finalized slot was 462805805. Official SNS
+migration FAQ confirms the pause. Do not bypass it with an old resolver.
+The corresponding **nubs.sns** successfully resolved through the validated SDK
+to **3S4iLZaixgHMFY7S3jmkG4YQvDupKRzCRiYdicomCRkG**. Owner explicitly
+approved **nubs.sns** as the fee receiver, and a fresh resolution matched.
+It is pinned in `app/shared/solana.ts`, with output-token ATA derivation in
+`app/server/solana-fee.ts`. This local configuration does not enable Solana
+signing or deploy the unfinished Solana route. Read-only helper:
+`npx tsx scripts/resolve-solana-fee-recipient.ts nubs.sns`. Evidence is retained
+in `data/review-20261028/mainnet-acceptance/solana-fee-resolution.json`.
+EVM homepage cleanup deployment is verified as **blunts:web-2d92b3c**.
 
 The 1 USDG EVM mainnet round trip is **complete and verified**: buy receipt,
 finite QQQ approval and exact full-position sale are canonical and successful.

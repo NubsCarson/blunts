@@ -1,6 +1,7 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY vendor ./vendor
 RUN npm ci
 COPY tsconfig.json vite.config.ts capacitor.config.ts ./
 COPY app ./app
@@ -10,6 +11,7 @@ FROM node:24-bookworm-slim
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8745 APP_ORIGIN=https://blunt.nubs.site
 WORKDIR /app
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/vendor ./vendor
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/app/server ./app/server
 COPY --from=build --chown=node:node /app/app/shared ./app/shared

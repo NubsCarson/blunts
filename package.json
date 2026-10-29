@@ -28,9 +28,13 @@
     "start:legacy": "tsx app/server/main.ts",
     "test:e2e:legacy": "playwright test --config playwright.config.ts",
     "release:qualify-origin": "tsx scripts/qualify-release-origin.ts",
-    "release:qualify-https": "node scripts/qualify-local-https.mjs"
+    "release:qualify-https": "node scripts/qualify-local-https.mjs",
+    "dev:solana": "tsx watch app/server/solana-main.ts",
+    "start:solana": "tsx app/server/solana-main.ts",
+    "test:e2e:solana": "playwright test --config playwright.solana.config.ts"
   },
   "dependencies": {
+    "@bonfida/spl-name-service": "4.0.1",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.2",
@@ -45,6 +49,12 @@
     "@fastify/static": "^10.1.5",
     "@fontsource/bungee": "^5.3.0",
     "@fontsource/figtree": "^5.3.0",
+    "@solana/spl-token": "0.4.15",
+    "@solana/wallet-standard-features": "1.5.0",
+    "@solana/web3.js": "1.98.4",
+    "@wallet-standard/app": "1.1.1",
+    "bs58": "6.0.0",
+    "buffer": "6.0.3",
     "fastify": "^5.12.5",
     "lucide-react": "^1.62.0",
     "pg": "^8.23.1",
@@ -71,6 +81,10 @@
   },
   "overrides": {
     "xcode": {
+      "uuid": "11.1.1"
+    },
+    "bigint-buffer": "file:./vendor/bigint-buffer",
+    "jayson": {
       "uuid": "11.1.1"
     }
   }

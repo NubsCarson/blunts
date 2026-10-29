@@ -12,6 +12,10 @@ import { CashOut } from "./CashOut";
 import { BanknoteArrowDown } from "lucide-react";
 import { StewardLogin } from "./StewardLogin";
 import { EvmApp } from "./EvmApp";
+import { lazy, Suspense } from "react";
+const SolanaApp = lazy(() =>
+  import("./SolanaApp").then((m) => ({ default: m.SolanaApp })),
+);
 import { HowItWorks } from "./HowItWorks";
 import { request, native, shareStatement, onResume, onBack } from "./platform";
 type Intent = {
@@ -1415,5 +1419,13 @@ function App() {
   );
 }
 createRoot(document.getElementById("root")!).render(
-  window.location.pathname === "/legacy" ? <App /> : <EvmApp />,
+  window.location.pathname === "/legacy" ? (
+    <App />
+  ) : window.location.pathname === "/sol" ? (
+    <Suspense fallback={<p>Opening your stash…</p>}>
+      <SolanaApp />
+    </Suspense>
+  ) : (
+    <EvmApp />
+  ),
 );
