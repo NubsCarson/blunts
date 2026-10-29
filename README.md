@@ -1,5 +1,11 @@
 # Blunts
 
+**Active product: a Web3 web app.** Connect an existing EVM browser wallet.
+A separate mobile app or MetaMask mobile setup is not required for the desktop
+flow. The optional native-wallet experiment is preserved on local branch
+`codex/native-wallet-prototype-20261028`; it is outside the active web scope.
+
+
 Wallet-first local preview: normal EVM wallet + Robinhood Chain QQQ tokens, using
 Shaw's original 3D tray and Fill/Spark design. No email signup or brokerage API keys
 are required by the active preview. **The owner has approved local wallet signing.**

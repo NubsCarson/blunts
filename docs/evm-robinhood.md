@@ -1,4 +1,11 @@
-# Wallet-first Blunts — local implementation
+# Wallet-first Blunts — local web implementation
+
+**Latest owner clarification:** the active product is a normal Web3 web app
+using the existing browser wallet. Native testing was beyond the needed scope.
+Its optional SDK prototype is preserved on
+`codex/native-wallet-prototype-20261028` (`11fa854`). Active web source removes
+that SDK integration; no phone setup is needed for the desktop flow. Native
+acceptance items below are historical/optional, not web release gates.
 
 For the consolidated current receipts and unfinished work, read
 [local wallet acceptance](local-wallet-acceptance.md).

@@ -1,6 +1,10 @@
 # Blunts local wallet acceptance — October 28, 2026
 
-Current application source: `38fef72`. Nothing is deployed or publicly published.
+The owner subsequently clarified the active product is the normal Web3 **web
+app**, using an existing browser wallet. Native pairing is optional future work
+and is not a web-completion gate. The experiment is preserved separately at
+`codex/native-wallet-prototype-20261028` (`11fa854`); the active web branch
+reverts its SDK dependencies in `e4d4b63`. Nothing is deployed or published.
 This is the current acceptance map; the longer provider/launch documents retain
 historical proposals and receipts. The owner replaced the active provider-first
 route with an EVM wallet + Robinhood Chain, then approved local signing and the
@@ -20,10 +24,10 @@ route with an EVM wallet + Robinhood Chain, then approved local signing and the
 | Scoped local signing | `app/shared/execution-policy.ts`; signing browser cases; full UI fork receipt | HTTP loopback web only; holder chooses finite approval and swap separately; hosted/native signing disabled |
 | Actual signed execution and fee | `data/review-20261028/evm/ui-fork-1793191879094/receipt.json` at `ae8d602` | Deployed-contract buy/sell, exact 1% output fee recipient balance deltas, mined revert with zero token movement/app fee, cancellation recovery; isolated fork only |
 | Recovery and observation | Journal, multi-tab locking, replacement and finality tests | No automatic replay; immutable original attempts; RPC inclusion/safe/finalized tags remain separate from independent Ethereum settlement |
-| Current app checks | `ios-safe-area-check.log`, `ios-safe-area-browser.log`, `ios-safe-area-format.log` under private review/evm | 78 passed/two optional service skips; 36 browser cases passed; formatting passed |
-| Android actual runtime | `data/review-20261028/evm/android-runtime/receipt.json`, native framebuffer | Dedicated Android 14 emulator: real WebView/Capacitor HTTP market and quote, fee UI, signing disabled, no-wallet state, original 3D tray |
-| iOS actual runtime | `data/review-20261028/evm/ios-runtime-current/receipt.json` | Current unsigned iPhone 17 Pro simulator app: real market read, original tray and corrected safe-area header; no wallet/signature |
-| Current native packages | `data/review-20261028/evm/current-native-checkpoint/receipt.json` | Android debug APK + unsigned iOS Simulator archive; all nine JS bundles matched to both packages; development API only |
+| Current app checks | `web-focus-check.log`, `web-focus-browser.log`, `web-focus-format.log` under private review/evm | 78 passed/two optional service skips; 36 browser cases passed; formatting passed |
+| Historical Android runtime | `data/review-20261028/evm/android-runtime/receipt.json`, native framebuffer | Dedicated Android 14 emulator: real WebView/Capacitor HTTP market and quote, fee UI, signing disabled, no-wallet state, original 3D tray |
+| Historical iOS runtime | `data/review-20261028/evm/ios-runtime-current/receipt.json` | Current unsigned iPhone 17 Pro simulator app: real market read, original tray and corrected safe-area header; no wallet/signature |
+| Optional native packages | `data/review-20261028/evm/current-native-checkpoint/receipt.json` | Android debug APK + unsigned iOS Simulator archive; all nine JS bundles matched to both packages; development API only |
 
 API quote `amountOut`/`minimumOut` remain gross pool amounts. UI output/minimum
 are net of the floor-rounded 1% fee. Fill fees are QQQ; Spark fees are USDG.
@@ -33,17 +37,17 @@ valid for their recorded source; later network/CSS changes did not alter swap co
 
 ## Open work and acceptance limits
 
-1. **Native wallet connection:** packaged apps currently preview, with signing
-   disabled. No native EIP-1193 pairing exists; their mobile browser handoff needs
-   a public HTTPS app origin which has not been configured or published. Evaluate
-   an appropriate keyless local native-wallet path before claiming a working
-   native investing app. A build and native HTTP response do not close this gap.
+1. **Web focus:** connect the existing EVM browser wallet. No native SDK, phone
+   setup or new wallet account is required by the desktop flow. The separate
+   prototype's SDK relay/link preparation and missing-app/return checks do not
+   establish peer-wallet acceptance; retain them as optional research.
 2. **Real holder execution:** the observed wallet has zero USDG. Holder eligibility
    was not verified. No personal-wallet allowance/signature or mainnet swap was
    requested. An eligible holder must personally perform financial acceptance;
    fixtures, fork signatures and public transaction samples cannot replace it.
-3. **Physical/hardware wallets:** simulator/emulator captures do not prove physical
+3. **Optional device support:** simulator/emulator captures do not prove physical
    phone, hardware wallet, native pairing, background return or device signing.
+   These are future support claims, not prerequisites for the active desktop web app.
 4. **Publication:** public host, owned app links, production deployment, release
    signing/provisioning, store review and live smoke tests remain unapproved and
    unverified. No public tunnel or paid provider plan was created.

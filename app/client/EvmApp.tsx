@@ -42,6 +42,7 @@ type Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<any>;
   on?: (name: string, fn: (value: any) => void) => void;
   removeListener?: (name: string, fn: (value: any) => void) => void;
+  off?: (name: string, fn: (value: any) => void) => void;
 };
 type WalletChoice = { id: string; name: string; provider: Provider };
 const usd = (value: bigint) =>
@@ -201,6 +202,7 @@ export function EvmApp() {
     };
     const disconnected = () => {
       invalidate();
+      setProvider(null);
       setAccount(null);
       setChain(null);
     };
@@ -208,9 +210,10 @@ export function EvmApp() {
     provider.on?.("accountsChanged", accountsChanged);
     provider.on?.("chainChanged", chainChanged);
     return () => {
-      provider.removeListener?.("disconnect", disconnected);
-      provider.removeListener?.("accountsChanged", accountsChanged);
-      provider.removeListener?.("chainChanged", chainChanged);
+      const remove = provider.removeListener ?? provider.off;
+      remove?.call(provider, "disconnect", disconnected);
+      remove?.call(provider, "accountsChanged", accountsChanged);
+      remove?.call(provider, "chainChanged", chainChanged);
     };
   }, [provider]);
   async function refreshBalances() {

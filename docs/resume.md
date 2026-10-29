@@ -1,3 +1,30 @@
+# Owner clarified web-only scope — latest October 28
+
+The owner clarified: use the normal Web3 web app and connect an existing browser
+wallet. Do not require a phone, MetaMask mobile installation, native pairing or
+native signing to finish the active product. The previous native-device question
+is no longer needed for this scope.
+
+The native experiment is preserved on `codex/native-wallet-prototype-20261028`
+at `11fa854`, with its SDK, AppLauncher integration, return scheme, tests and
+research. Its peer-wallet pairing was never accepted. The active branch
+`codex/evm-robinhood-local` reverts that SDK integration in `e4d4b63`; original
+optional native shells, old branches, data and all private receipts remain intact.
+The active web dependencies contain no MetaMask Connect SDK or app-launcher
+requirement. Keep the 1% Fill/Spark output fee to the approved 0x4a27…3073 wallet.
+
+Active flow: localhost:8745 → Connect wallet → choose the existing injected EVM
+wallet → review the quote → choose finite approval/swap steps yourself. The
+actual Chrome MetaMask connection, public reads and insufficient-funds rejection
+were already observed. Browser discovery remains generic EIP-6963/EIP-1193.
+The final active web check passed 78 tests (two optional service skips), all 36
+browser cases and formatting. Web-only wallet event cleanup additionally ensures
+that a disconnected provider cannot restore the account through stale callbacks.
+Publishing and personal financial transactions remain on hold. Native/hardware
+mobile acceptance is conditional future scope, not a web-completion gate.
+
+---
+
 # Current acceptance map — latest October 28
 
 Read [local wallet acceptance](local-wallet-acceptance.md) first. It consolidates
