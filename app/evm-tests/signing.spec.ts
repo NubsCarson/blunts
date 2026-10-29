@@ -21,6 +21,7 @@ async function setup(
   const sends: any[] = [];
   const txs = new Map<string, any>();
   let allowance = 0n,
+    holdOriginal = false,
     failNonce = false,
     delayedReceipt = 0,
     receiptChecks = 0;
@@ -140,6 +141,8 @@ async function setup(
             : null;
         } else if (method === "eth_getTransactionReceipt") {
           receiptChecks++;
+          if (holdOriginal && p[0] === "0x" + "1".padStart(64, "0"))
+            return { jsonrpc: "2.0", id: item.id, result: null };
           if (delayedReceipt > 0) {
             delayedReceipt--;
             return { jsonrpc: "2.0", id: item.id, result: null };
@@ -241,6 +244,9 @@ async function setup(
       delayedReceipt = 1;
     },
     receiptChecks: () => receiptChecks,
+    keepOriginalPending: () => {
+      holdOriginal = true;
+    },
     failBeforeWallet: () => {
       failNonce = true;
     },
@@ -393,7 +399,10 @@ test("unknown wallet outcome blocks another local signing request even after a n
 test("tracking an included wallet cancellation preserves the original attempt and unlocks only a fresh review", async ({
   page,
 }) => {
-  const { sends, addCancellation } = await setup(page);
+  const { sends, addCancellation, keepOriginalPending } = await setup(page);
+  // A cancellation replaces an unmined approval. Keep the original pending
+  // until that replacement is tracked, regardless of CI/browser timing.
+  keepOriginalPending();
   const signing = page.getByRole("region", { name: "Wallet signing" });
   await signing.getByRole("checkbox").check();
   await signing

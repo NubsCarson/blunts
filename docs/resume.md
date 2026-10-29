@@ -1,5 +1,12 @@
 # Current focus: Solana parity, token integration later
 
+**Upstream and credit:** Shaw's `lalalune/blunts` is the original project and
+sole handoff target: https://github.com/lalalune/blunts/pull/1. The NubsCarson
+fork exists only because the authenticated account has read-only upstream
+access. Its extra release PR was closed without merging main. Do not treat it
+as a separate product or remove Shaw's credit. The owner approved updating the
+existing hosted preview, but activation requires passing CI and staged checks.
+
 **October 29 update: personal wallet test deferred by owner; local Surfpool
 acceptance completed instead.** Do not keep asking the owner to sign the old
 0.50 USDC review. The owner explicitly requested an agent-owned test wallet.
