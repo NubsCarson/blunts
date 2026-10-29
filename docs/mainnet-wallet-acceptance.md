@@ -1,3 +1,24 @@
+# Current result: the 1 USDG mainnet round trip passed
+
+The holder completed both swaps. The spending permission for QQQ and the sale
+were confirmed in the holder's wallet. Canonical successful receipts and exact
+transfers show the test QQQ position was fully sold for **0.998504 USDG**, composed
+of 0.988519 USDG user output and 0.009985 USDG app fee. The holder is also the fee
+recipient, so both transfers return to that wallet. ETH gas is separate.
+
+The sale input exactly matched all QQQ delivered by the original 1 USDG buy.
+Additional independent holder tests (including a later 3 USDG review) are outside
+this acceptance run and were not initiated, repeated or cancelled by the agent.
+Do not resubmit the original buy or sell. Private buy/approval/sale receipts are
+under `data/review-20261028/mainnet-acceptance/`, including `buy.json`,
+`sell-approval.json` and `sell.json`. The source checks canonical chain, holder,
+router, exact amount, asset direction and 100 bps fee routing.
+
+The stale handoff checkpoint below is preserved as historical context, not the
+current action to perform. The current focus is Solana parity; community-token
+integration is deferred. The owner selected **nubs.sol** as the Solana fee
+recipient; resolve it with SNS and pin its verified receiving public key.
+
 # Wallet-only mainnet acceptance
 
 Scope accepted by the owner: existing wallet, eligible non-U.S. holders, Robinhood

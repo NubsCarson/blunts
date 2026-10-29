@@ -1,3 +1,39 @@
+# Current focus: Solana parity, token integration later
+
+Owner explicitly requested the existing EVM wallet feature set on Solana next.
+Community-token integration is last. Owner chose **nubs.sol** for the 1% Solana
+fee recipient. Resolve it using SNS's validated resolver and pin the public key;
+do not use the Ethereum 0x fee address on Solana or invent a recipient.
+
+The 1 USDG EVM mainnet round trip is **complete and verified**: buy receipt,
+finite QQQ approval and exact full-position sale are canonical and successful.
+The sale returned 0.998504 USDG total (0.988519 net + 0.009985 app fee); holder
+and fee recipient are the same address, so the fee returns to the holder in this
+test. ETH gas is separate. Do not replay the old pending handoff or trade again.
+Additional independent holder $3 testing was left untouched.
+
+The user asked to remove the homepage chain/signing strip and redundant text.
+That cleanup is commit 2d92b3c; its deployment is being verified. EVM recovery,
+finite approval, minimum output, 1% fee and automatic confirmation remain.
+
+Solana research verified the issuer's QQQx registry through
+https://api.xstocks.fi/api/v2/public/assets/QQQx: Solana mint
+Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ, canonical USDC
+EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v. QQQx is Token-2022 with
+8 decimals and Scaled UI Amount; raw transaction units must remain separate from
+scaled display/valuation. A real keyless Jupiter v1 quote for 1 USDC with 100bps
+fee and instructionVersion=V2 succeeded. However v1 is deprecated: use/verify v2
+/build for the actual implementation. api.jup.ag supports keyless 0.5 RPS for
+prototyping; a production key/provider remains a capacity gate. Do not use the
+soon-to-retire lite-api endpoint. SNS SDK + SPL Token currently peer web3.js 1.x;
+check compatible versions before installing, even though latest web3 is 3.x.
+
+The scene's $100/blunt and ten-to-a-band rules match the original prototype.
+Accounting differs: original prototype rolled deposited principal S.P, while
+current app uses current estimated QQQ-token holding value. Do not call them
+identical or invent extra rewards/staking. No official community-token mint was
+found in tracked sources; a third-party reply has an unverified mint. Defer it.
+
 # Live acceptance waiting for the holder
 
 Scope is now explicitly wallet-only for eligible non-U.S. holders. Current image
