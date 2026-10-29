@@ -728,9 +728,9 @@ export function EvmApp() {
                 into USDG in your wallet.
               </p>
               <p>
-                This local version reads real market data and previews swaps. It
-                only requests a transaction after you choose a step and approve
-                in your wallet. Blunts takes 1% of the tokens received on each
+                This version reads real market data and previews swaps. It only
+                requests a transaction after you choose a step and approve in
+                your wallet. Blunts takes 1% of the tokens received on each
                 swap. Bank withdrawals are not connected.
               </p>
               <p>

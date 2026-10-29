@@ -102,3 +102,14 @@ The active package now uses the wallet server, the chosen origin, real published
 container ports and a wallet-specific smoke check. Hosted signing and public
 deployment remain withheld; earlier local completion must not be read as
 production acceptance.
+
+## Final local release checks
+
+The later release pass qualified 82 passing tests (two optional legacy-service
+skips), 36 passing browser checks, zero known production dependency audit issues,
+actual Docker startup/smoke, certificate-verified local HTTPS, separate API budgets
+for real proxy clients and rejection of spoofed forwarding headers. Fresh actual
+market reads and both direction quotes worked. The exact-domain activation patch
+is prepared and offline-qualified but unapplied. Source approval remains false;
+no personal signature, public deployment or DNS change occurred. See
+[the current shipping gates](web-release.md).

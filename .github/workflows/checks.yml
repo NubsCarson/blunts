@@ -41,6 +41,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run build
+      - run: npm run release:qualify-origin
       - run: npm test
         env:
           TEST_DATABASE_URL: postgresql://blunts:ci-test-only@localhost:5432/blunts_test

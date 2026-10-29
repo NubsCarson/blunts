@@ -26,7 +26,9 @@
     "ios:open": "cap open ios",
     "mobile:release-check": "node scripts/check-mobile.mjs",
     "start:legacy": "tsx app/server/main.ts",
-    "test:e2e:legacy": "playwright test --config playwright.config.ts"
+    "test:e2e:legacy": "playwright test --config playwright.config.ts",
+    "release:qualify-origin": "tsx scripts/qualify-release-origin.ts",
+    "release:qualify-https": "node scripts/qualify-local-https.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

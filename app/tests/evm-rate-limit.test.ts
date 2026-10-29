@@ -23,3 +23,31 @@ test("static app assets do not consume API budget and remain loadable after API 
     await app.close();
   }
 });
+
+test("the single release proxy keeps independent client budgets and development ignores forwarded IPs", async () => {
+  const { evmConfig } = await import("../server/evm-config.js");
+  for (const release of [false, true]) {
+    const config = evmConfig(release ? { HOST: "0.0.0.0" } : {});
+    const app = Fastify({ trustProxy: config.trustProxy });
+    await app.register(rateLimit, { ...evmRateLimit, max: 2 });
+    app.get("/api/health", async () => ({ ok: true }));
+    try {
+      await app.ready();
+      const client = (ip: string) =>
+        app.inject({
+          url: "/api/health",
+          remoteAddress: "172.20.0.2",
+          headers: { "x-forwarded-for": ip },
+        });
+      assert.equal((await client("192.0.2.10")).statusCode, 200);
+      assert.equal((await client("192.0.2.10")).statusCode, 200);
+      assert.equal((await client("192.0.2.10")).statusCode, 429);
+      assert.equal(
+        (await client("192.0.2.11")).statusCode,
+        release ? 200 : 429,
+      );
+    } finally {
+      await app.close();
+    }
+  }
+});

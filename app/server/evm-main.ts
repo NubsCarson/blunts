@@ -9,8 +9,9 @@ import serveStatic from "@fastify/static";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { market, quote } from "./robinhood.js";
-const { port, host, origin, execution } = evmConfig(process.env);
+const { port, host, origin, execution, trustProxy } = evmConfig(process.env);
 const app = Fastify({
+  trustProxy,
   logger: {
     redact: ["req.headers.cookie", "req.headers.authorization", "req.body"],
     serializers: {
@@ -34,6 +35,9 @@ await app.register(helmet, {
   },
 });
 await app.register(rateLimit, evmRateLimit);
+app.addHook("onSend", async (req, reply) => {
+  if (req.url.startsWith("/api/")) reply.header("cache-control", "no-store");
+});
 app.get("/api/health", async () => ({
   ok: true,
   mode: "evm-preview",

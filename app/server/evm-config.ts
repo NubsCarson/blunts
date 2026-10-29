@@ -17,5 +17,11 @@ export function evmConfig(env: NodeJS.ProcessEnv) {
     throw new Error(
       "APP_ORIGIN must be HTTP loopback or the pinned release origin",
     );
-  return Object.freeze({ port, host, origin, execution });
+  // Release layout: exactly one Caddy proxy, with the app port private/loopback.
+  // Development ignores forwarded headers. Do not expose the app port publicly.
+  const trustProxy =
+    origin === RELEASE_ORIGIN
+      ? (_address: string, hop: number) => hop === 0
+      : false;
+  return Object.freeze({ port, host, origin, execution, trustProxy });
 }

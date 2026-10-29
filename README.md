@@ -50,6 +50,7 @@ including exclusion of US persons; wallet connection is not eligibility approval
 
 See [current local acceptance and unfinished work](docs/local-wallet-acceptance.md),
 [implementation and verified contracts](docs/evm-robinhood.md)
+[release preparation and shipping blockers](docs/web-release.md),
 and [resume notes](docs/resume.md).
 
 ## Verification
@@ -58,6 +59,7 @@ and [resume notes](docs/resume.md).
 npm run check
 npm run test:e2e
 npm run format:check
+npm run release:qualify-origin
 ```
 
 Browser tests use disposable wallet/RPC fixtures. Real issuer/public-chain quote

@@ -1,3 +1,24 @@
+# Latest release handoff — October 28 (Pacific)
+
+**Keep local. Owner has not approved shipping.** Domain remains
+https://blunt.nubs.site. The exact-origin activation patch is prepared and tested
+in a temporary offline copy, but is unapplied; `HOSTED_RELEASE_APPROVED=false`.
+
+Fixed the single-proxy API budget issue. Qualified real Docker + local HTTPS:
+certificate/hostname validation, HTML/assets/headers, separate client budgets and
+rejection of spoofed XFF headers. No public TLS/DNS/deploy or OS CA trust changes.
+Fresh real market and both swap quote reads succeeded; no wallet request/trade.
+82 tests passed/two optional service skips; 36 browser checks passed; formatting
+passed; zero known production dependency vulnerabilities. Receipts are private
+`data/review-20261028/evm/final-*`; see [shipping blockers](web-release.md).
+
+Remaining gates are explicit owner publication approval, an actual production
+host/DNS/public TLS and hosted acceptance, plus an eligible funded holder's
+personally executed mainnet acceptance. No Dinari/MoonPay keys, paid domain or
+native app required. Production Caddy config is a prepared file, not a running
+public service. The tested release layout has exactly one edge proxy; use
+DNS-only initially and keep the backend port private.
+
 # Current release preparation — October 28
 
 Owner chose **https://blunt.nubs.site** temporarily and will buy a domain later.
