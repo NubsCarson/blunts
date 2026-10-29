@@ -1,3 +1,27 @@
+# Live acceptance waiting for the holder
+
+Scope is now explicitly wallet-only for eligible non-U.S. holders. Current image
+is **blunts:web-fa52eb3**. The holder's 1 USDG mainnet buy is verified, including
+canonical receipts, exact input, token delivery and the fixed 1% fee routing.
+The holder is also the fee recipient, so both fee and user-output transfers
+return to that wallet. See [mainnet wallet acceptance](mainnet-wallet-acceptance.md).
+
+The sell-all review was prepared for only the QQQ from that buy. MetaMask is open
+with an unsigned finite QQQ spending-permission request (nonce 170) for the
+canonical router. **Holder confirmation is still required. No sell is verified.**
+The agent may prepare and inspect the request, but must not press MetaMask's final
+Confirm. Do not repeat the buy, delete journal records or replay an unknown
+attempt. After the holder confirms spending permission, verify that receipt,
+prepare the sale, hand off final wallet confirmation again, and verify the full
+round trip onchain before calling the wallet MVP accepted.
+
+The main UI now automatically watches confirmations, shows clear waiting and Done
+states, and omits Check status, Price breakdown and raw transaction details.
+Wallet activity keeps rare recovery/receipt tools collapsed. 83 unit checks and
+48 browser cases passed. User Chrome test tab is on the live site; MetaMask's
+side panel holds the prepared permission. Private evidence is in
+`data/review-20261028/mainnet-acceptance/`.
+
 # Usability repair deployed — October 28 (Pacific)
 
 Current production image is **blunts:web-b05709d**. The owner reported the first
