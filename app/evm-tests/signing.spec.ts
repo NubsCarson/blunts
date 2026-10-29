@@ -13,7 +13,9 @@ async function setup(page: Page, decline = false, loseResponse = false) {
   const sends: any[] = [];
   const txs = new Map<string, any>();
   let allowance = 0n,
-    failNonce = false;
+    failNonce = false,
+    delayedReceipt = 0,
+    receiptChecks = 0;
   await page.addInitScript(
     ({ owner, decline, loseResponse }) => {
       (window as any).ethereum = {
@@ -123,6 +125,11 @@ async function setup(page: Page, decline = false, loseResponse = false) {
               }
             : null;
         } else if (method === "eth_getTransactionReceipt") {
+          receiptChecks++;
+          if (delayedReceipt > 0) {
+            delayedReceipt--;
+            return { jsonrpc: "2.0", id: item.id, result: null };
+          }
           const tx = txs.get(p[0]);
           if (tx && tx.to.toLowerCase() === cash.toLowerCase())
             allowance = decodeFunctionData({
@@ -203,10 +210,15 @@ async function setup(page: Page, decline = false, loseResponse = false) {
     .getByRole("button", { name: "Browser wallet", exact: true })
     .click();
   await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByLabel("USDG to spend", { exact: true }).fill("25");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
 
   return {
     sends,
+    delayReceiptOnce: () => {
+      delayedReceipt = 1;
+    },
+    receiptChecks: () => receiptChecks,
     failBeforeWallet: () => {
       failNonce = true;
     },
@@ -227,7 +239,8 @@ async function setup(page: Page, decline = false, loseResponse = false) {
 test("local signing requests finite approval and swap separately, with no automatic next transaction", async ({
   page,
 }, info) => {
-  const { sends } = await setup(page);
+  const { sends, delayReceiptOnce, receiptChecks } = await setup(page);
+  delayReceiptOnce();
   const signing = page.getByRole("region", { name: "Wallet signing" });
   await expect(
     signing.getByRole("button", {
@@ -247,43 +260,50 @@ test("local signing requests finite approval and swap separately, with no automa
     })
     .click();
   await expect(
-    signing.getByText("Sent. Waiting for network confirmation.", {
+    signing.getByText("Waiting for the network to confirm.", {
       exact: true,
     }),
   ).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("confirming-wallet-request.png"),
+  });
   expect(sends).toHaveLength(1);
   expect(sends[0].chainId).toBe("0x1237");
   expect(sends[0].from).toBe(owner);
   expect(
     decodeFunctionData({ abi: approvalAbi, data: sends[0].data }).args![1],
   ).toBe(25000000n);
-  await signing
-    .getByRole("button", { name: "Check status", exact: true })
-    .click();
+
   await expect(
     signing.getByRole("button", {
       name: "Fill in wallet",
       exact: true,
     }),
-  ).toBeEnabled();
+  ).toBeEnabled({ timeout: 15000 });
+  expect(receiptChecks()).toBeGreaterThanOrEqual(2);
   expect(sends).toHaveLength(1);
-  await signing.getByRole("checkbox").check();
   await signing
     .getByRole("button", { name: "Fill in wallet", exact: true })
     .click();
   await expect(
-    signing.getByRole("button", { name: "Check status", exact: true }),
+    signing.getByText("Waiting for the network to confirm.", { exact: true }),
   ).toBeVisible();
   expect(sends).toHaveLength(2);
-  await signing
-    .getByRole("button", { name: "Check status", exact: true })
-    .click();
+
   await expect(
-    signing.getByText("Your swap was confirmed on Robinhood Chain.", {
+    signing.getByText("Your purchase is confirmed.", {
       exact: true,
     }),
   ).toBeVisible();
   expect(sends).toHaveLength(2);
+  await expect(
+    signing.getByRole("button", { name: "Check status", exact: true }),
+  ).toHaveCount(0);
+  await page.screenshot({ path: info.outputPath("completed-wallet-swap.png") });
+  await signing.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Fill", exact: true }),
+  ).toBeVisible();
 });
 test("declining a local signing prompt retains cancellation and never starts a second request", async ({
   page,
@@ -361,7 +381,7 @@ test("tracking an included wallet cancellation preserves the original attempt an
     })
     .click();
   await expect(
-    signing.getByText("Sent. Waiting for network confirmation.", {
+    signing.getByText("Waiting for the network to confirm.", {
       exact: true,
     }),
   ).toBeVisible();
@@ -369,11 +389,13 @@ test("tracking an included wallet cancellation preserves the original attempt an
     cancelHash = addCancellation();
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.locator(".evm-connect button").click();
-  await page.getByText("Activity on this browser", { exact: true }).click();
+  await page.getByText("Activity", { exact: true }).click();
+  await page.getByText("Recover a wallet request", { exact: true }).click();
   await page.getByLabel("Transaction hash", { exact: true }).fill(cancelHash);
   await page
     .getByRole("button", { name: "Track transaction", exact: true })
     .click();
+  await page.getByText("Receipt details", { exact: true }).click();
   await expect(
     page.getByText("Wallet cancellation included", { exact: true }),
   ).toBeVisible();
@@ -388,6 +410,7 @@ test("tracking an included wallet cancellation preserves the original attempt an
   expect(sends).toHaveLength(1);
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByLabel("USDG to spend", { exact: true }).fill("25");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
 
   await expect(

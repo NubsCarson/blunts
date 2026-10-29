@@ -9,7 +9,11 @@ import type { SwapPlan } from "../shared/swap-plan";
 import type { StepFee } from "./gas-readiness";
 import { executionPolicyForOrigin } from "../shared/execution-policy";
 import { chainReader } from "./chain";
+import { useReceiptPolling } from "./use-receipt-polling";
+import { LoaderCircle, Check } from "lucide-react";
 import { withActivityLock } from "./activity-lock";
+export type WalletProgress =
+  "review" | "wallet" | "approval" | "swap" | "complete";
 const blocking = new Set([
   "awaiting_wallet",
   "unknown",
@@ -24,13 +28,17 @@ export function WalletSigning({
   expired,
   onRefresh,
   onObserved,
+  onProgress,
+  onDone,
 }: {
   plan: SwapPlan;
   wallet: WalletRpc;
   fee: StepFee | null;
   expired: boolean;
   onRefresh: () => void;
-  onObserved: () => void;
+  onObserved: () => void | Promise<void>;
+  onProgress: (stage: WalletProgress) => void;
+  onDone: () => void;
 }) {
   const [records, setRecords] = useState<SwapAttempt[]>([]),
     [eligible, setEligible] = useState(false),
@@ -70,23 +78,45 @@ export function WalletSigning({
     const version = epoch.current;
     try {
       const journal = new SwapJournal(window.localStorage, plan.owner, 4663);
-      await withActivityLock(journal.key, () =>
-        reconcileSwapAttempt(record, chainReader, journal),
-      );
+      const observed = await withActivityLock(journal.key, async () => {
+        const latest = journal
+          .read()
+          .find((r) => r.planId === record.planId && r.step === record.step);
+        if (!latest) throw Error("Saved request is missing");
+        return reconcileSwapAttempt(latest, chainReader, journal);
+      });
       if (version === epoch.current) {
         setRecords(journal.read());
-        onObserved();
+        if (["included", "reverted", "replaced"].includes(observed.state))
+          await onObserved();
       }
     } catch {
       if (version === epoch.current)
         setError(
-          "Receipt check unavailable. Do not repeat a request with an unknown outcome.",
+          "We can’t check the network yet. We’ll keep trying; don’t send this again.",
         );
     } finally {
       flight.current = false;
       if (version === epoch.current) setBusy(false);
     }
   }
+  const progress: WalletProgress =
+    next < 0
+      ? "complete"
+      : pending?.hash
+        ? pending.call.kind === "swap"
+          ? "swap"
+          : "approval"
+        : busy && walletOpen
+          ? "wallet"
+          : "review";
+  useReceiptPolling(pending, check);
+  useEffect(() => {
+    onProgress(progress);
+  }, [progress, onProgress]);
+  const permissionConfirmed = steps.some(
+    (r) => r.state === "included" && r.call.kind !== "swap",
+  );
   async function sign() {
     if (
       flight.current ||
@@ -167,19 +197,35 @@ export function WalletSigning({
   if (!enabled) return null;
   return (
     <section className="evm-signing" aria-label="Wallet signing">
-      <h3>
-        {next >= 0 && plan.calls[next].kind !== "swap"
-          ? "Allow this amount."
-          : "Finish in your wallet."}
-      </h3>
-      {next >= 0 && plan.calls[next].kind !== "swap" && (
-        <p>
-          First, give permission to use only this amount. This doesn't buy
-          anything yet.
-        </p>
+      {progress === "review" && next >= 0 && (
+        <h3>
+          {plan.calls[next].kind !== "swap"
+            ? "Allow this amount."
+            : permissionConfirmed
+              ? "Now confirm your purchase."
+              : "Confirm in your wallet."}
+        </h3>
       )}
+      {progress === "review" &&
+        next >= 0 &&
+        plan.calls[next].kind !== "swap" && (
+          <p>
+            First, give permission to use only this amount. This doesn't buy
+            anything yet.
+          </p>
+        )}
       {next < 0 ? (
-        <p role="status">Your swap was confirmed on Robinhood Chain.</p>
+        <div className="evm-complete" role="status">
+          <Check size={32} aria-hidden="true" />
+          <p>
+            {plan.quote.side === "fill"
+              ? "Your purchase is confirmed."
+              : "Your sale is confirmed."}
+          </p>
+          <button className="primary" disabled={busy} onClick={onDone}>
+            Done
+          </button>
+        </div>
       ) : (
         <>
           {pending ? (
@@ -189,17 +235,18 @@ export function WalletSigning({
                 pending.state === "awaiting_wallet"
                   ? "Check your wallet activity before continuing."
                   : pending.state === "pending"
-                    ? "Sent. Waiting for network confirmation."
+                    ? "Waiting for the network to confirm."
                     : "Check this request in Activity before continuing."}
               </p>
               {pending.hash && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void check(pending)}
-                >
-                  Check status
-                </button>
+                <>
+                  <LoaderCircle
+                    className="evm-wait-spinner"
+                    size={28}
+                    aria-hidden="true"
+                  />
+                  <p>This page updates automatically when it’s confirmed.</p>
+                </>
               )}
             </div>
           ) : existing ? (
@@ -213,22 +260,26 @@ export function WalletSigning({
             </p>
           ) : (
             <>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={eligible}
-                  onChange={(e) => setEligible(e.target.checked)}
-                />
-                I meet the token’s eligibility rules, including not being a U.S.
-                person.
-              </label>
-              <a
-                href="https://docs.robinhood.com/chain/stock-tokens/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Review token rights and eligibility
-              </a>
+              {!permissionConfirmed && (
+                <>
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={eligible}
+                      onChange={(e) => setEligible(e.target.checked)}
+                    />
+                    I meet the token’s eligibility rules, including not being a
+                    U.S. person.
+                  </label>
+                  <a
+                    href="https://docs.robinhood.com/chain/stock-tokens/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Review token rights and eligibility
+                  </a>
+                </>
+              )}
               <button
                 className="primary"
                 disabled={

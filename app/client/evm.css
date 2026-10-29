@@ -366,3 +366,30 @@
   font-size: 12px;
   min-height: 44px;
 }
+.evm-flow-status {
+  border: 0;
+  padding-top: 0;
+}
+.evm-wait-spinner {
+  display: block;
+  margin: 24px auto;
+  color: var(--gold);
+  animation: evm-wait 1s linear infinite;
+}
+.evm-complete {
+  text-align: center;
+  padding: 16px 0;
+}
+.evm-complete > svg {
+  color: var(--leaf);
+}
+@keyframes evm-wait {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evm-wait-spinner {
+    animation: none;
+  }
+}

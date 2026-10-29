@@ -189,6 +189,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
   ).toBeVisible();
   await expect(page.locator(".scene-value")).toHaveText("$770.00");
   await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByLabel("USDG to spend", { exact: true }).fill("25");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByText("0.03465 QQQ", { exact: true })).toBeVisible();
   await expect(
@@ -205,32 +206,12 @@ test("wallet-first preview connects without signup, reads balances and never sen
     await page.evaluate(() => (window as any).fixtureWalletRequests),
   ).toEqual(["eth_requestAccounts", "eth_chainId"]);
 
-  await page.getByText("Technical details", { exact: true }).click();
   await expect(
-    page.getByText("Robinhood Chain · 4663", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("0.03447675 QQQ", { exact: true })).toBeVisible();
-  await expect(page.getByText(/1% of received QQQ/)).toBeVisible();
-  await expect(
-    page.getByRole("link").filter({ hasText: /^0x4a27/i }),
-  ).toHaveAttribute(
-    "href",
-    /address\/0x4a27c325de7629c6bbd187e1e456b56c82e73073/i,
+    page.getByText("Technical details", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Price breakdown", { exact: true })).toHaveCount(
+    0,
   );
-  const firstStep = page.getByRole("region", { name: "Transaction step 1" });
-  await expect(firstStep.getByText("25 USDG", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("0 ETH · network fees are separate", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    firstStep
-      .getByRole("link")
-      .filter({ hasText: "0xcaf681a66d020601342297493863e78c959e5cb2" }),
-  ).toHaveAttribute(
-    "href",
-    "https://robinhoodchain.blockscout.com/address/0xcaf681a66d020601342297493863e78c959e5cb2",
-  );
-  await page.getByText("Technical details", { exact: true }).click();
 
   await page.screenshot({ path: info.outputPath("prepared-wallet-steps.png") });
   await page.getByRole("button", { name: "Close", exact: true }).click();
@@ -249,7 +230,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
   await expect(
     page.getByRole("region", { name: "Saved review" }),
   ).toBeVisible();
-  await page.getByText("Activity on this browser", { exact: true }).click();
+  await page.getByText("Activity", { exact: true }).click();
   const sibling = await context.newPage();
   await sibling.goto("/");
   await sibling
@@ -259,7 +240,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
     .getByRole("button", { name: "Browser wallet", exact: true })
     .click();
   await sibling.locator(".evm-connect button").click();
-  await sibling.getByText("Activity on this browser", { exact: true }).click();
+  await sibling.getByText("Activity", { exact: true }).click();
   const lockName = `blunts:activity:blunts:swap:4663:${wallet.toLowerCase()}`;
   await sibling.evaluate(async (name) => {
     await new Promise<void>((ready) => {
@@ -271,6 +252,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
       });
     });
   }, lockName);
+  await page.getByText("Recover a wallet request", { exact: true }).click();
   await page.getByLabel("Transaction hash", { exact: true }).fill(trackedHash);
   await page
     .getByRole("button", { name: "Track transaction", exact: true })
@@ -289,7 +271,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
   await expect(page.locator(".evm-activity-list li")).toHaveCount(0);
   await sibling.evaluate(() => (window as any).releaseFixtureLock());
   await expect(
-    sibling.getByText("Included on Robinhood Chain", { exact: true }),
+    sibling.getByText("Confirmed on Robinhood Chain", { exact: true }),
   ).toBeVisible();
   await expect(sibling.locator(".evm-activity-list li")).toHaveCount(1);
   expect(
@@ -297,8 +279,9 @@ test("wallet-first preview connects without signup, reads balances and never sen
   ).toEqual(["eth_requestAccounts", "eth_chainId"]);
   await sibling.close();
   await expect(
-    page.getByText("Included on Robinhood Chain", { exact: true }),
+    page.getByText("Confirmed on Robinhood Chain", { exact: true }),
   ).toBeVisible();
+  await page.getByText("Receipt details", { exact: true }).click();
   await expect(
     page.getByText(
       "Based on this RPC’s block tags. Independent Ethereum batch/finality proof and bank or bridge settlement are not verified.",
@@ -335,11 +318,12 @@ test("wallet-first preview connects without signup, reads balances and never sen
     .getByRole("button", { name: "Browser wallet", exact: true })
     .click();
   await page.locator(".evm-connect button").click();
-  await page.getByText("Activity on this browser", { exact: true }).click();
+  await page.getByText("Activity", { exact: true }).click();
   await expect(
-    page.getByText("Included on Robinhood Chain", { exact: true }),
+    page.getByText("Confirmed on Robinhood Chain", { exact: true }),
   ).toBeVisible();
   await expect(page.locator(".evm-activity-list li")).toHaveCount(1);
+  await page.getByText("Receipt details", { exact: true }).click();
   await page
     .getByRole("button", { name: "Check receipt", exact: true })
     .click();
@@ -377,6 +361,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
   cashUnits = 0n;
   nativeEth = "0xde0b6b3a7640000";
   await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByLabel("USDG to spend", { exact: true }).fill("25");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
 
   await expect(page.getByRole("alert")).toHaveText(
@@ -422,6 +407,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
     });
   });
   await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByLabel("USDG to spend", { exact: true }).fill("25");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await quoteHeld;
   await page.evaluate(() => (window as any).fixtureChainChanged("0x1"));
@@ -578,4 +564,39 @@ test("public HTTPS mobile handoff contains only the app origin and never starts 
     ),
   ).toBe(true);
   // Do not follow the link: this is route construction proof, not installed-app acceptance.
+});
+
+test("a quote for a different amount is rejected before wallet preparation", async ({
+  page,
+}) => {
+  await page.route("**/api/onchain/market", (route) =>
+    route.fulfill({
+      json: {
+        chainId: 4663,
+        symbol: "QQQ",
+        address: "0xD5f3879160bc7c32ebb4dC785F8a4F505888de68",
+        cashAddress: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+        bid: "700",
+        ask: "701",
+        multiplier: "1.1",
+        generatedAt: new Date().toISOString(),
+        halted: false,
+        status: "ASSET_STATUS_ACTIVE",
+        transactionsEnabled: true,
+      },
+    }),
+  );
+  await page.route("**/api/onchain/quote?*", (route) =>
+    route.fulfill({ json: { side: "fill", amountIn: "2" } }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Fill", exact: true }).click();
+  await page.getByLabel("USDG to spend", { exact: true }).fill("1");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "This price didn't match your amount. Please try again.",
+  );
+  await expect(
+    page.getByRole("region", { name: "Prepared wallet steps" }),
+  ).toHaveCount(0);
 });
