@@ -52,7 +52,7 @@ jobs:
           docker run --detach --name blunts-smoke -p 127.0.0.1:8742:8745 \
             blunts-sandbox:${{ github.sha }}
           trap 'docker logs blunts-smoke; docker rm --force blunts-smoke' EXIT
-          curl --fail --retry 15 --retry-delay 2 --retry-connrefused http://localhost:8742/api/health
+          curl --fail --max-time 5 --retry 15 --retry-delay 2 --retry-all-errors http://localhost:8742/api/health
           curl --fail http://localhost:8742/ | grep -q '<div id="root">'
           node scripts/smoke-local-container.mjs http://localhost:8742
       - run: npx playwright install --with-deps chromium webkit
