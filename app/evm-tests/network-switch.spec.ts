@@ -12,6 +12,8 @@ for (const eventBeforeAck of [true, false])
         let chain = "0xdef1",
           release!: () => void;
         (window as any).fixtureSwitchDone = () => release();
+        (window as any).fixtureDisconnect = () =>
+          listeners.disconnect?.(undefined);
         (window as any).fixtureRepeatIdentity = (
           kind: "chain" | "accounts",
         ) => {
@@ -39,9 +41,16 @@ for (const eventBeforeAck of [true, false])
           on: (event: string, fn: (value: string) => void) => {
             listeners[event] = fn;
           },
-          removeListener: (event: string) => {
-            delete listeners[event];
-          },
+          removeListener: eventBeforeAck
+            ? (event: string) => {
+                delete listeners[event];
+              }
+            : undefined,
+          off: eventBeforeAck
+            ? undefined
+            : (event: string) => {
+                delete listeners[event];
+              },
         };
       },
       { eventBeforeAck },
@@ -129,4 +138,17 @@ for (const eventBeforeAck of [true, false])
     await expect(
       page.getByText("Wallet balance unavailable", { exact: true }),
     ).toHaveCount(0);
+    await page.evaluate(() => (window as any).fixtureDisconnect());
+    await expect(
+      page.getByRole("button", { name: "Connect wallet", exact: true }),
+    ).toBeVisible();
+    await page.evaluate(async () => {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      (window as any).fixtureRepeatIdentity("accounts");
+    });
+    await expect(
+      page.getByRole("button", { name: "Connect wallet", exact: true }),
+    ).toBeVisible();
   });

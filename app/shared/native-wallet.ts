@@ -5,9 +5,14 @@ export class NativeWalletError extends Error {}
 export function nativeWalletLink(raw: string): string {
   if (raw.length > 32768)
     throw new NativeWalletError("Wallet link was not valid.");
+  // Connect 2.1.1 emits metamask:////connect/mwp. Normalize only this observed
+  // SDK spelling; route and encoded session query must remain intact.
+  const canonical = raw.startsWith("metamask:////connect/mwp?")
+    ? raw.replace("metamask:////connect/mwp?", "metamask://connect/mwp?")
+    : raw;
   let url: URL;
   try {
-    url = new URL(raw);
+    url = new URL(canonical);
   } catch {
     throw new NativeWalletError("Wallet link was not valid.");
   }
@@ -53,6 +58,7 @@ export async function connectMetaMaskApp(
     cancelled = signal.aborted;
   let cleanup: Promise<void> | undefined;
   const close = async () => {
+    cancelled = true;
     if (sdk) {
       cleanup ??= sdk.disconnect();
       try {
@@ -68,6 +74,7 @@ export async function connectMetaMaskApp(
   const stopped = new Promise<never>((_, reject) => {
     failLink = (error) => {
       cancelled = true;
+      if (!failed) void close().catch(() => {});
       reject(error);
     };
     abort = () =>
@@ -106,7 +113,7 @@ export async function connectMetaMaskApp(
               "MetaMask could not be opened. Return here and try connecting again.",
             );
         });
-        openings.push(opening);
+        if (failed) openings.push(opening);
         void opening.catch(() =>
           failLink(
             new NativeWalletError(

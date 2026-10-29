@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 const adb = "/Users/nubs/Library/Android/sdk/platform-tools/adb";
 const serial = "emulator-5580",
   endpoint = "http://127.0.0.1:9226";
-const root = "data/review-20261028/evm/android-runtime";
+const root = `data/review-20261028/evm/android-runtime-${Date.now()}`;
 if (
   execFileSync(adb, ["-s", serial, "emu", "avd", "name"], { encoding: "utf8" })
     .trim()
@@ -24,6 +24,8 @@ try {
   if (pages.length !== 1 || pages[0].url() !== "https://localhost/")
     throw Error("Unexpected WebView target.");
   const page = pages[0];
+  let walletSockets = 0;
+  page.on("websocket", () => walletSockets++);
   await expect(page).toHaveTitle("Blunts — Your wallet. Your stash.");
   await expect(
     page.getByText("Preview · signing disabled", { exact: true }),
@@ -57,13 +59,39 @@ try {
   await page
     .getByRole("button", { name: "Connect wallet", exact: true })
     .click();
+  await page
+    .getByRole("button", { name: "Connect MetaMask app", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "Install the MetaMask app to connect this device.",
+  );
   const walletText = await page.locator("dialog").innerText();
-  await expect(page.getByText(/No browser wallet detected/)).toBeVisible();
+  if (walletSockets !== 0)
+    throw Error("SDK relay started before an installed wallet was found.");
   await expect(page.getByRole("link", { name: /MetaMask/i })).toHaveCount(0);
   await expect(
     page.getByRole("region", { name: "Wallet signing" }),
   ).toHaveCount(0);
   await page.screenshot({ path: `${root}/native-no-wallet.png` });
+  execFileSync(adb, [
+    "-s",
+    serial,
+    "shell",
+    "am",
+    "start",
+    "-W",
+    "-a",
+    "android.intent.action.VIEW",
+    "-d",
+    "com.lalalune.blunts://wallet-return",
+    "-p",
+    "com.lalalune.blunts",
+  ]);
+  await expect(page).toHaveURL("https://localhost/");
+  execFileSync(adb, ["-s", serial, "shell", "input", "keyevent", "4"]);
+  await expect(
+    page.getByRole("button", { name: "Connect wallet", exact: true }),
+  ).toBeVisible();
   const bundles = await page
     .locator("script[src]")
     .evaluateAll((elements) => elements.map((el) => el.getAttribute("src")));
@@ -96,6 +124,9 @@ try {
         walletText,
         nativeSigningEnabled: false,
         accountConnected: false,
+        missingNativeWalletBlockedBeforeRelay: walletSockets === 0,
+        ownReturnSchemeOpenedWithoutNavigationOrTransaction: true,
+        androidBackClosedWalletSheet: true,
         mainnetWrites: 0,
         personalDeviceTouched: false,
         coverage: [

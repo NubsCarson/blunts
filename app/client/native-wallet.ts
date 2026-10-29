@@ -19,7 +19,14 @@ export async function connectNativeWallet(signal: AbortSignal) {
   return connectMetaMaskApp(
     {
       canOpen: async () =>
-        (await AppLauncher.canOpenUrl({ url: "metamask://" })).value,
+        (
+          await AppLauncher.canOpenUrl({
+            url:
+              Capacitor.getPlatform() === "android"
+                ? "io.metamask"
+                : "metamask://",
+          })
+        ).value,
       open: async (url) => (await AppLauncher.openUrl({ url })).completed,
       createClient: async (open) => {
         const attempt = ++generation;
@@ -39,7 +46,6 @@ export async function connectNativeWallet(signal: AbortSignal) {
           skipAutoAnnounce: true,
           ui: {
             headless: true,
-            preferExtension: false,
             showInstallModal: false,
           },
           mobile: {

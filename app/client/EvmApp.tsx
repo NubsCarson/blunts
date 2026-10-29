@@ -201,6 +201,8 @@ export function EvmApp() {
     };
     const disconnected = () => {
       invalidate();
+      setProvider(null);
+      nativeDisconnect.current = null;
       setAccount(null);
       setChain(null);
     };
@@ -317,9 +319,15 @@ export function EvmApp() {
             : "Wallet connection was unavailable. Try again.",
         );
     } finally {
-      if (nativeAttempt.current === controller) nativeAttempt.current = null;
-      setNativeConnecting(false);
-      setBusy(false);
+      const ownsAttempt = nativeAttempt.current === controller;
+      if (ownsAttempt) nativeAttempt.current = null;
+      if (
+        ownsAttempt ||
+        (!nativeAttempt.current && identity === epoch.current)
+      ) {
+        setNativeConnecting(false);
+        setBusy(false);
+      }
     }
   }
   async function disconnectWallet() {

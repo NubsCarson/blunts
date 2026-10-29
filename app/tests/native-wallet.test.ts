@@ -58,12 +58,20 @@ function fixture() {
 test("native connection launches only SDK connection routes and never transaction/web links", () => {
   assert.equal(nativeWalletLink(link), link);
   assert.equal(
+    nativeWalletLink(
+      "metamask:////connect/mwp?p=encoded%2Brequest&c=test-channel",
+    ),
+    "metamask://connect/mwp?p=encoded%2Brequest&c=test-channel",
+  );
+  assert.equal(
     nativeWalletLink("metamask://connect?test=public"),
     "metamask://connect?test=public",
   );
   for (const bad of [
     "https://evil.example/connect",
     "metamask://send/0x123",
+    "metamask:////send/0x123",
+    "metamask:////connect/mwp/extra?p=x",
     "metamask://connect/buy",
     "metamask://user@connect/mwp",
     "metamask://connect/mwp#fragment",
@@ -194,4 +202,19 @@ test("invalid wallet identity and arbitrary SDK error text never reach app state
     connectMetaMaskApp(f.deps, new AbortController().signal),
     /^Error: Wallet connection was cancelled or unavailable/,
   );
+});
+
+test("disconnect suppresses later SDK links and a later launch failure disconnects the session", async () => {
+  const f = fixture(),
+    connection = await connectMetaMaskApp(f.deps, new AbortController().signal);
+  await connection.disconnect();
+  f.triggerLink(link);
+  await setImmediate();
+  assert.equal(f.opened().length, 1);
+  const second = fixture();
+  await connectMetaMaskApp(second.deps, new AbortController().signal);
+  second.deps.open = async () => false;
+  second.triggerLink(link);
+  await setImmediate();
+  assert.equal(second.closed(), 1);
 });
