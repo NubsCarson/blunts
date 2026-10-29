@@ -55,7 +55,7 @@ quote. No wallet request or public write was made by that diagnostic. This
 reproduces the timing bottleneck; it does not prove the exact discarded exception
 from the owner's earlier click.
 
-The staged correction is: one amount step, one Continue action that prepares the
+The correction deployed as `b05709d` is: one amount step, one Continue action that prepares the
 review, readable token amounts, one wallet action at a time, clear preflight versus
 submitted states, and details collapsed by default. Eligibility, fixed fees,
 finite approval, immutable journal, unknown-outcome blocking and minimum received
@@ -75,3 +75,21 @@ No auto-buy or automatic retry of a possibly submitted request was introduced.
 - Finish native/store releases only if restored to scope.
 - Finalize and separately authorize any public marketing posts/demo. Label local
   fork footage honestly; do not claim a completed mainnet trade without a receipt.
+
+## Repair verification
+
+83 tests passed with two optional legacy-service skips. All 42 browser cases
+passed, including reading for more than twenty seconds, preserving unknown
+outcomes, cancellation recovery and a preflight failure that creates no wallet
+request or journal attempt. The updated router calls passed five local-fork
+wallet requests with virtual funds. This remains separate from holder/mainnet
+trade acceptance.
+
+The repaired public bundle, market data and both direction quote APIs passed
+`scripts/smoke-web-release.mjs`. In the owner's nubsontopgang Chrome session,
+MetaMask reconnected, the actual USDG balance loaded, and entering 1 USDG followed
+by Continue produced the short review with the eligibility checkbox unchecked.
+No approval or swap was clicked by the agent. The old never-submitted draft and
+activity were preserved. Private evidence is in
+`data/review-20261028/usability/`; the deployed image is `blunts:web-b05709d`,
+and the prior `blunts:web-a2631e9` image is retained.

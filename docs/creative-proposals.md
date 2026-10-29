@@ -27,16 +27,16 @@ current visual threshold is crossed.
 
 ## Web-app post drafts — not published
 
-These drafts describe the implemented local wallet route. Any attached trade
+These drafts describe the implemented wallet route, deployed for review at https://blunt.nubs.site. Any attached trade
 footage must be labelled "Local fork demo" unless an actual holder/mainnet
 receipt exists. Do not describe stock tokens as ETF share ownership, bank cash-out
-or guaranteed savings. Public distribution still requires owner approval.
+or guaranteed savings. Posting these drafts still requires separate owner approval.
 
 **Build post:**
 
 > Shaw's rolling-tray idea, now a Web3 web app. Connect your existing EVM wallet,
 > preview USDG ↔ QQQ-token swaps, and review the exact fee before signing.
-> Built and tested locally. Not public yet.
+> The interface is live for review at https://blunt.nubs.site. Funded customer acceptance is still in progress.
 
 **Short product hook:**
 
@@ -51,7 +51,7 @@ or guaranteed savings. Public distribution still requires owner approval.
 
 **Feedback post:**
 
-> Before we launch Blunts: what would you expect Fill and Spark to do?
+> Trying the Blunts preview: what would you expect Fill and Spark to do?
 > Testing whether the interface explains itself before adding more features.
 
 **Six-second demo plan:** show the original tray → wallet connection → net quote

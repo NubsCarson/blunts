@@ -1,3 +1,30 @@
+# Usability repair deployed — October 28 (Pacific)
+
+Current production image is **blunts:web-b05709d**. The owner reported the first
+Fill attempt failed and the screen was too technical. Do not equate the earlier
+read-only acceptance with a completed funded customer journey. See
+[original plan versus actual scope](plan-status-2026-10-28.md).
+
+The repair combines preview and preparation behind Continue, uses one short
+review, collapses technical details, rounds display quantities conservatively,
+keeps exact values in calldata/details, extends the price review to 90 seconds
+and gives the on-chain wallet confirmation a further five-minute deadline.
+Finite approvals, minimum output, fixed 1% fee and immutable/unknown-outcome
+guards remain. Failure before a saved wallet attempt now says nothing was sent,
+rather than implying an uncertain broadcast. No personal request was retried.
+
+83 tests + 42 browser cases passed; five virtual local-fork requests passed.
+The live bundle and quote smoke passed and the owner Chrome/MetaMask session
+reached the new read-only 1 USDG review. No agent approval or real swap occurred.
+Previous release pin is saved at `/opt/blunts/previous-release.env`; old images
+and the read-only rollback remain. Receipts: `data/review-20261028/usability/`.
+
+The original US novice bank-to-ETF product is NOT complete: bank/card funding,
+bank payout, supported US brokerage route, funded holder acceptance, mobile/store
+releases and published marketing remain absent/deferred. Robinhood token access
+excludes US persons. Earlier broad completion statements are superseded by this
+explicit scope reconciliation.
+
 # SHIPPED — October 28, 2026 (Pacific)
 
 Owner explicitly approved shipping. **https://blunt.nubs.site is live.**
