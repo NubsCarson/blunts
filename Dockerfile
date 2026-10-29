@@ -6,6 +6,7 @@ RUN npm ci
 COPY tsconfig.json vite.config.ts capacitor.config.ts ./
 COPY app ./app
 RUN npm run build
+RUN npm prune --omit=dev
 
 FROM node:24-bookworm-slim
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8745 APP_ORIGIN=https://blunt.nubs.site

@@ -9,6 +9,8 @@ import serveStatic from "@fastify/static";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { market, quote } from "./robinhood.js";
+import { solanaRoutes } from "./solana-app.js";
+import { solanaExecutionOrigin } from "../shared/solana.js";
 const { port, host, origin, execution, trustProxy } = evmConfig(process.env);
 const app = Fastify({
   trustProxy,
@@ -43,7 +45,12 @@ app.get("/api/health", async () => ({
   mode: "evm-preview",
   transactionsEnabled: execution.enabled,
   origin,
+  solana: {
+    network: "mainnet",
+    transactionsEnabled: solanaExecutionOrigin(origin),
+  },
 }));
+await app.register(solanaRoutes, { origin });
 app.get("/api/onchain/market", async (_, reply) => {
   try {
     return { ...(await market()), transactionsEnabled: execution.enabled };

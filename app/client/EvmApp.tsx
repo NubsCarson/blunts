@@ -474,7 +474,9 @@ export function EvmApp() {
       <header className="scene-header">
         <div className="scene-counts">
           <span className="scene-count">{rolled.toString()} rolled</span>
-          <span className="scene-count">{(rolled / 10n).toString()} bands</span>
+          <span className="scene-count">
+            {(rolled / 10n).toString()} {rolled / 10n === 1n ? "band" : "bands"}
+          </span>
         </div>
         <button
           className="menu-button"
@@ -719,6 +721,7 @@ export function EvmApp() {
             </>
           ) : panel === "menu" ? (
             <>
+              <a href="/sol">Use a Solana wallet</a>
               <button onClick={() => setPanel("how")}>How it works</button>
               <h1>
                 Same ritual.

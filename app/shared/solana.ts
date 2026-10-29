@@ -1,3 +1,6 @@
+import { RELEASE_ORIGIN } from "./release-target.js";
+// Owner approved hosted Solana publication on 2026-10-29. Exact origin only.
+export const SOLANA_HOSTED_RELEASE_APPROVED = true;
 // Canonical mainnet assets from the issuer's QQQx registry. Amounts used in
 // transactions are raw mint units; QQQx's display multiplier is separate.
 export const solanaAssets = Object.freeze({
@@ -39,8 +42,11 @@ export type SolanaReview = {
   lastValidBlockHeight: number;
   expiresAt: number;
 };
-export function solanaLocalOrigin(origin: string) {
-  return ["http://localhost:8753", "http://127.0.0.1:8753"].includes(origin);
+export function solanaExecutionOrigin(origin: string) {
+  return (
+    ["http://localhost:8753", "http://127.0.0.1:8753"].includes(origin) ||
+    (SOLANA_HOSTED_RELEASE_APPROVED && origin === RELEASE_ORIGIN)
+  );
 }
 export function solanaAmount(value: string, decimals: number): bigint {
   if (!/^(0|[1-9]\d{0,12})(\.\d+)?$/.test(value))

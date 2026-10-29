@@ -11,10 +11,11 @@ import type { FastifyInstance } from "fastify";
 // native Surfnet's loopback RPC can receive transactions; mainnet is read-only.
 const gameCheck = process.argv.includes("--game");
 const fundedUSDC = gameCheck ? 2500000000 : 25000000;
-const output = resolve(
+const outputRoot = resolve(
   "data/review-20261029/surfpool",
   gameCheck ? "game" : ".",
 );
+const output = resolve(outputRoot, "runs", String(Date.now()));
 mkdirSync(output, { recursive: true });
 const holder = Keypair.generate();
 const surf = Surfnet.startWithConfig({
@@ -247,7 +248,7 @@ try {
         await expect(page.getByText("10 rolled", { exact: true })).toBeVisible({
           timeout: 10000,
         });
-        await expect(page.getByText("1 bands", { exact: true })).toBeVisible();
+        await expect(page.getByText("1 band", { exact: true })).toBeVisible();
         await page.screenshot({
           path: resolve(output, "browser-one-band.png"),
         });
@@ -273,6 +274,11 @@ try {
   record.complete = true;
   record.finishedAt = new Date().toISOString();
   save();
+  writeFileSync(
+    resolve(outputRoot, "latest-success.json"),
+    JSON.stringify({ evidenceDirectory: output, ...record }, null, 2) + "\n",
+    { mode: 0o600 },
+  );
   console.log(
     JSON.stringify({
       complete: true,

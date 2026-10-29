@@ -1,11 +1,11 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import { evmRateLimit } from "./evm-rate-limit.js";
 import serveStatic from "@fastify/static";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { solanaAmount, solanaLocalOrigin } from "../shared/solana.js";
+import { solanaAmount, solanaExecutionOrigin } from "../shared/solana.js";
 import {
   solanaMarket,
   solanaBalances,
@@ -42,15 +42,35 @@ export async function createSolanaApp() {
     },
   });
   await app.register(rateLimit, evmRateLimit);
+  await app.register(solanaRoutes, { origin: "http://localhost:8753" });
+  app.get("/api/health", async () => ({
+    ok: true,
+    mode: "solana-local",
+    transactionsEnabled: true,
+  }));
+  await app.register(serveStatic, { root: resolve("dist") });
+  app.setNotFoundHandler((req, reply) =>
+    req.url.startsWith("/api/")
+      ? reply.code(404).send({ error: "Not found" })
+      : reply.sendFile("index.html"),
+  );
+  return app;
+}
+
+export async function solanaRoutes(
+  app: FastifyInstance,
+  options: { origin: string },
+) {
   app.addHook("onRequest", async (req, reply) => {
     if (
       req.method === "POST" &&
-      (!solanaLocalOrigin(req.headers.origin || "") ||
+      (!solanaExecutionOrigin(req.headers.origin || "") ||
+        req.headers.origin !== options.origin ||
         req.headers["x-blunts-request"] !== "1")
     )
       return reply
         .code(403)
-        .send({ error: "Open the local preview to continue." });
+        .send({ error: "Open Blunts at its approved address to continue." });
   });
   app.addHook("onSend", async (req, reply) => {
     if (req.url.startsWith("/api/")) reply.header("cache-control", "no-store");
@@ -70,11 +90,6 @@ export async function createSolanaApp() {
     });
   });
   const owner = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
-  app.get("/api/health", async () => ({
-    ok: true,
-    mode: "solana-local",
-    transactionsEnabled: true,
-  }));
   app.get("/api/solana/market", async () => solanaMarket());
   app.get("/api/solana/balances", async (req) =>
     solanaBalances(z.object({ owner }).strict().parse(req.query).owner),
@@ -111,11 +126,4 @@ export async function createSolanaApp() {
       .parse(req.query);
     return solanaReceipt(d.signature, d.messageHash);
   });
-  await app.register(serveStatic, { root: resolve("dist") });
-  app.setNotFoundHandler((req, reply) =>
-    req.url.startsWith("/api/")
-      ? reply.code(404).send({ error: "Not found" })
-      : reply.sendFile("index.html"),
-  );
-  return app;
 }

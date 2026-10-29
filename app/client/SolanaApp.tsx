@@ -28,7 +28,7 @@ import {
   type SolanaActivity,
 } from "./solana-journal";
 import {
-  solanaLocalOrigin,
+  solanaExecutionOrigin,
   solanaAmount,
   solanaRawFromDisplay,
   solanaScaledUnits,
@@ -95,7 +95,7 @@ export function SolanaApp() {
     flight = useRef(false),
     prepareEpoch = useRef(0);
   const address = account?.address,
-    local = solanaLocalOrigin(location.origin);
+    local = solanaExecutionOrigin(location.origin);
   const reloadActivity = () => {
     try {
       setRecords(readSolanaActivity());
@@ -484,7 +484,9 @@ export function SolanaApp() {
       <header className="scene-header">
         <div className="scene-counts">
           <span className="scene-count">{String(rolled)} rolled</span>
-          <span className="scene-count">{String(rolled / 10n)} bands</span>
+          <span className="scene-count">
+            {String(rolled / 10n)} {rolled / 10n === 1n ? "band" : "bands"}
+          </span>
         </div>
         <button
           className="menu-button"
@@ -603,6 +605,7 @@ export function SolanaApp() {
           ) : panel === "menu" ? (
             <>
               <h1>Same ritual.</h1>
+              <a href="/">Use an Ethereum wallet</a>
               <p>
                 Fill buys QQQx with USDC. Spark sells it back. Your funds stay
                 in your wallet.
@@ -907,7 +910,7 @@ export function SolanaApp() {
             </p>
           )}
           {!local && (
-            <p role="status">This Solana preview is available locally only.</p>
+            <p role="status">Trading isn’t available at this address.</p>
           )}
         </div>
       </dialog>

@@ -10,7 +10,7 @@ import {
   type AddressLookupTableAccount,
   SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
-import {verifiedSolanaTime} from "./solana-clock.js";
+import { verifiedSolanaTime } from "./solana-clock.js";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   getMint,
@@ -60,9 +60,17 @@ let cachedMarket: {
   at: number;
   value: { price: number; multiplier: number };
 } | null = null;
+let marketFlight: Promise<{ price: number; multiplier: number }> | null = null;
 export async function solanaMarket() {
   if (cachedMarket && Date.now() - cachedMarket.at < 20000)
     return cachedMarket.value;
+  if (!marketFlight)
+    marketFlight = loadSolanaMarket().finally(() => {
+      marketFlight = null;
+    });
+  return marketFlight;
+}
+async function loadSolanaMarket() {
   const [mint, cashMint, asset, price, slot] = await Promise.all([
     getMint(
       solanaConnection,
@@ -81,7 +89,13 @@ export async function solanaMarket() {
     solanaConnection.getSlot("confirmed"),
   ]);
   const blockTime = await solanaConnection.getBlockTime(slot);
-  const time = verifiedSolanaTime(slot,blockTime,blockTime===null?await solanaConnection.getAccountInfo(SYSVAR_CLOCK_PUBKEY,"confirmed"):null);
+  const time = verifiedSolanaTime(
+    slot,
+    blockTime,
+    blockTime === null
+      ? await solanaConnection.getAccountInfo(SYSVAR_CLOCK_PUBKEY, "confirmed")
+      : null,
+  );
   if (
     mint.decimals !== 8 ||
     cashMint.decimals !== 6 ||
@@ -327,7 +341,11 @@ export function verifySolanaSigned(bytes: Uint8Array, review: SolanaReview) {
 }
 export async function submitSolana(id: string, serialized: string) {
   const saved = prepared.get(id);
-  if (!saved || saved.review.expiresAt < Date.now())
+  if (!saved)
+    throw Error(
+      "This review is unavailable. Keep its activity record while confirmation is checked.",
+    );
+  if (!saved.submitted && saved.review.expiresAt < Date.now())
     return {
       sent: false as const,
       error: "Price expired. Nothing was sent. Update price.",

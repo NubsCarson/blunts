@@ -17,7 +17,7 @@ import {
   solanaRawFromDisplay,
   solanaAssets,
   solanaAppFee,
-  solanaLocalOrigin,
+  solanaExecutionOrigin,
   type SolanaReview,
 } from "../shared/solana.js";
 import { solanaMessageHash, verifySolanaSigned } from "../server/solana.js";
@@ -176,13 +176,14 @@ test("raw units are exact and signing stays restricted to the separate local pre
   assert.equal(solanaAmount("0.00137639", 8), 137639n);
   for (const value of ["0", "-1", "1e6", "1.0000001", "NaN", " 1", "01"])
     assert.throws(() => solanaAmount(value, 6));
-  assert.equal(solanaLocalOrigin("http://localhost:8753"), true);
+  assert.equal(solanaExecutionOrigin("http://localhost:8753"), true);
+  assert.equal(solanaExecutionOrigin("https://blunt.nubs.site"), true);
   for (const origin of [
-    "https://blunt.nubs.site",
+    "https://blunt.nubs.site.evil",
     "http://localhost:8745",
     "http://localhost.evil:8753",
     "https://localhost:8753",
   ])
-    assert.equal(solanaLocalOrigin(origin), false);
+    assert.equal(solanaExecutionOrigin(origin), false);
   assert.equal(solanaAssets.stock.decimals, 8);
 });
