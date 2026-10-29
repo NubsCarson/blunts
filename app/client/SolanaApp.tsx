@@ -606,6 +606,15 @@ export function SolanaApp() {
             <>
               <h1>Same ritual.</h1>
               <a href="/">Use an Ethereum wallet</a>
+              <p className="evm-fine">
+                <a
+                  href="https://github.com/lalalune/blunts"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Original concept &amp; tray by Shaw
+                </a>
+              </p>
               <p>
                 Fill buys QQQx with USDC. Spark sells it back. Your funds stay
                 in your wallet.

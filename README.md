@@ -1,5 +1,11 @@
 # Blunts
 
+**Original concept, 3D tray animation and Fill/Spark design by Shaw.**
+This work continues [his original repository, lalalune/blunts](https://github.com/lalalune/blunts),
+and is submitted back through [upstream PR #1](https://github.com/lalalune/blunts/pull/1).
+The NubsCarson fork is only the GitHub contribution transport; it is not a
+separate project or a claim to the original work.
+
 **Active product: a Web3 web app.** Connect an existing EVM browser wallet.
 A separate mobile app or MetaMask mobile setup is not required for the desktop
 flow. The optional native-wallet experiment is preserved on local branch

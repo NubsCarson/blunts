@@ -722,6 +722,15 @@ export function EvmApp() {
           ) : panel === "menu" ? (
             <>
               <a href="/sol">Use a Solana wallet</a>
+              <p className="evm-fine">
+                <a
+                  href="https://github.com/lalalune/blunts"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Original concept &amp; tray by Shaw
+                </a>
+              </p>
               <button onClick={() => setPanel("how")}>How it works</button>
               <h1>
                 Same ritual.
