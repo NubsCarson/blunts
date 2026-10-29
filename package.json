@@ -31,7 +31,9 @@
     "release:qualify-https": "node scripts/qualify-local-https.mjs",
     "dev:solana": "tsx watch app/server/solana-main.ts",
     "start:solana": "tsx app/server/solana-main.ts",
-    "test:e2e:solana": "playwright test --config playwright.solana.config.ts"
+    "test:e2e:solana": "playwright test --config playwright.solana.config.ts",
+    "test:solana:fork": "npm run build && tsx scripts/qualify-solana-surfpool.ts --browser",
+    "test:solana:fork:game": "npm run build && tsx scripts/qualify-solana-surfpool.ts --browser --game"
   },
   "dependencies": {
     "@bonfida/spl-name-service": "4.0.1",
@@ -68,6 +70,7 @@
     "@axe-core/playwright": "^4.13.0",
     "@capacitor/cli": "^8.5.2",
     "@playwright/test": "^1.63.0",
+    "@solana/surfpool": "1.7.0",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",

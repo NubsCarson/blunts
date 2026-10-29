@@ -8,7 +8,9 @@ import {
   TransactionMessage,
   VersionedTransaction,
   type AddressLookupTableAccount,
+  SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
+import {verifiedSolanaTime} from "./solana-clock.js";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   getMint,
@@ -78,10 +80,9 @@ export async function solanaMarket() {
     json("https://api.xstocks.fi/api/v2/public/assets/QQQx/price-data"),
     solanaConnection.getSlot("confirmed"),
   ]);
-  const time = await solanaConnection.getBlockTime(slot);
+  const blockTime = await solanaConnection.getBlockTime(slot);
+  const time = verifiedSolanaTime(slot,blockTime,blockTime===null?await solanaConnection.getAccountInfo(SYSVAR_CLOCK_PUBKEY,"confirmed"):null);
   if (
-    !time ||
-    Math.abs(Date.now() / 1000 - time) > 90 ||
     mint.decimals !== 8 ||
     cashMint.decimals !== 6 ||
     !mint.isInitialized ||
@@ -181,9 +182,10 @@ export async function prepareSolana(
     feeAccount: solanaAta(solanaAppFee.recipient, output).toBase58(),
     instructionVersion: "V2",
     transactionVersion: "0",
-    onlyDirectRoutes: "true",
     dexes: "Raydium CLMM",
-    useSharedAccounts: "false",
+    // V2 /build supports this account budget. Legacy V1 routing flags can
+    // be ignored; the instruction validator still enforces one direct swap.
+    maxAccounts: "30",
   });
   const build = (await json(
     "https://api.jup.ag/swap/v2/build?" + params,

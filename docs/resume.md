@@ -1,5 +1,23 @@
 # Current focus: Solana parity, token integration later
 
+**October 29 update: personal wallet test deferred by owner; local Surfpool
+acceptance completed instead.** Do not keep asking the owner to sign the old
+0.50 USDC review. The owner explicitly requested an agent-owned test wallet.
+See [fork acceptance](solana-fork-acceptance.md) for actual API and browser
+buy/sell receipts, fee verification and the reproducible command. Four local
+transactions used real cloned programs, fake funds and a newly generated key
+kept only in memory. Zero QQQx remained. No personal wallet was used; no real
+mainnet transaction was submitted. 98 unit checks pass. The local server factory
+is shared by the real preview and fork HTTP tests; newest-slot Clock fallback
+and HTTP 429 handling were corrected without weakening origin/signing guards.
+Funded mainnet acceptance remains deferred, not silently declared complete.
+Keep Solana local until a new owner shipping approval.
+An additional larger fake-money browser test bought with 1,030 USDC, displayed
+ten rolled blunts / one band, then sold all and returned to zero QQQx. A V2
+`maxAccounts=30` request budget now reliably selects the qualified single-pool
+route at that size; old unsupported routing flags were removed. See the fork
+acceptance record and `npm run test:solana:fork:game`.
+
 Solana local flow is now implemented on `codex/solana-wallet-parity`.
 See [local qualification and remaining funded acceptance](solana-local.md).
 Run `npm run build` then `npm run start:solana`; preview is

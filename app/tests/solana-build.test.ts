@@ -46,6 +46,22 @@ test("qualified real Jupiter V2 builds preserve both directions and include the 
     );
   }
 });
+test("bounded V2 routing qualifies the real larger single-pool build without relaxing validation", () => {
+  const b: SolanaBuild = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/solana-large-build.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const checked = validateSolanaBuild(
+    b,
+    b.swapInstruction.accounts[0].pubkey,
+    "fill",
+    1030000000n,
+  );
+  assert.equal(checked.swap.data.readBigUInt64LE(8), 1030000000n);
+  assert.equal(checked.minimum, (BigInt(b.outAmount) * 9950n) / 10000n);
+});
 test("rejects tampered spending, slippage, fee, route, mint, destination and extra instructions", () => {
   const bad = "11111111111111111111111111111111";
   const changes: ((b: SolanaBuild) => void)[] = [

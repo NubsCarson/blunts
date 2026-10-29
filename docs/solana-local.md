@@ -1,5 +1,10 @@
 # Solana wallet parity — local qualification
 
+Update: the owner deferred personal mainnet signing and authorized a disposable
+test wallet. [Actual Surfpool API and browser round trips](solana-fork-acceptance.md)
+now pass with real cloned programs and fake funds. This supersedes the old
+pending personal-wallet action below. No funded mainnet acceptance is claimed.
+
 Run `npm run build`, then `npm run start:solana`. Open
 http://localhost:8753/sol. The separate server binds only 127.0.0.1:8753;
 signing is restricted in source to localhost/127.0.0.1 on that port. The live
