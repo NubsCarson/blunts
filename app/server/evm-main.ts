@@ -1,4 +1,4 @@
-import { executionPolicyForOrigin } from "../shared/execution-policy.js";
+import { evmConfig } from "./evm-config.js";
 import { evmRateLimit } from "./evm-rate-limit.js";
 import { ReferenceGapError } from "../shared/reference-price.js";
 import { amountUnits } from "../shared/robinhood.js";
@@ -9,8 +9,7 @@ import serveStatic from "@fastify/static";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { market, quote } from "./robinhood.js";
-const port = Number(process.env.PORT ?? 8745);
-const execution = executionPolicyForOrigin(`http://localhost:${port}`);
+const { port, host, origin, execution } = evmConfig(process.env);
 const app = Fastify({
   logger: {
     redact: ["req.headers.cookie", "req.headers.authorization", "req.body"],
@@ -39,6 +38,7 @@ app.get("/api/health", async () => ({
   ok: true,
   mode: "evm-preview",
   transactionsEnabled: execution.enabled,
+  origin,
 }));
 app.get("/api/onchain/market", async (_, reply) => {
   try {
@@ -85,6 +85,6 @@ app.setNotFoundHandler((req, reply) =>
     ? reply.code(404).send({ error: "Not found" })
     : reply.sendFile("index.html"),
 );
-await app.listen({ host: "127.0.0.1", port });
+await app.listen({ host, port });
 process.once("SIGTERM", () => void app.close());
 process.once("SIGINT", () => void app.close());

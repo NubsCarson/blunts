@@ -1,3 +1,20 @@
+# Current release preparation — October 28
+
+Owner chose **https://blunt.nubs.site** temporarily and will buy a domain later.
+Keep all deployment/DNS/public signing pending shipping approval. See
+[web release preparation](web-release.md) for the exact origin, current package,
+Cloudflare shortlist and release gates. The old local-goal closure below predates
+this additional production-packaging work; it is not a release-readiness claim.
+
+The wallet Docker/Compose package now binds correctly, uses no DB/provider
+credentials, and has a wallet-specific smoke check. `compose.legacy.yaml` and the
+legacy smoke script preserve the older account-based package. Local development
+remains on 8745; production-equivalent local Compose review uses 8746 with hosted
+signing disabled. No environment flag enables hosted signing. Current checks:
+80 passed/two optional skips, 36 browser cases, formatting, Compose validation,
+actual Docker build and published-loopback container smoke all passed. Logs are
+`data/review-20261028/evm/release-target-*`. No public release occurred.
+
 # Local web goal audit complete — latest October 28
 
 The authorized local web implementation/qualification is complete as far as it

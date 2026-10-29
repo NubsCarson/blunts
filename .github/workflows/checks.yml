@@ -48,9 +48,7 @@ jobs:
       - name: Container startup and health
         shell: bash
         run: |
-          docker run --detach --name blunts-smoke --network host \
-            -e PORT=8742 -e APP_ORIGIN=http://localhost:8742 -e AUTH_PROVIDER=demo \
-            -e DATABASE_URL=postgresql://blunts:ci-test-only@localhost:5432/blunts_test \
+          docker run --detach --name blunts-smoke -p 127.0.0.1:8742:8745 \
             blunts-sandbox:${{ github.sha }}
           trap 'docker logs blunts-smoke; docker rm --force blunts-smoke' EXIT
           curl --fail --retry 15 --retry-delay 2 --retry-connrefused http://localhost:8742/api/health

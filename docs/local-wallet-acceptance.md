@@ -80,7 +80,7 @@ checkpoint. `prepare-swap.ts` differs only by the known insufficient-balance
 error class, with unchanged checks and transaction behavior. The later browser
 identity/cleanup changes passed the current 36-case suite.
 
-All currently authorized local implementation/qualification work is complete as
+At that checkpoint, the then-authorized local implementation/qualification was complete as
 far as it can proceed without holder actions. Dinari/MoonPay customer/trade work
 was superseded by the owner's wallet-only decision and remains preserved rather
 than presented as accepted. Native app work was explicitly removed from the
@@ -91,3 +91,14 @@ This closes the local development goal, not mainnet or launch acceptance. Real
 holder execution/eligibility and public deployment remain intentionally on hold
 under the owner's instructions. They must not be represented as passed, and no
 automatic wallet transaction or publication should occur when this goal closes.
+
+## Subsequent release preparation
+
+The owner subsequently requested production preparation and selected
+https://blunt.nubs.site. That audit found stale account-based container/CI smoke
+configuration and a server that ignored HOST. Those were real packaging gaps
+after the local UI goal closed. See [web release preparation](web-release.md).
+The active package now uses the wallet server, the chosen origin, real published
+container ports and a wallet-specific smoke check. Hosted signing and public
+deployment remain withheld; earlier local completion must not be read as
+production acceptance.
