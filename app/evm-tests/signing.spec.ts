@@ -9,7 +9,15 @@ import { approvalAbi } from "../shared/swap-plan";
 const owner = "0x1111111111111111111111111111111111111111",
   cash = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
   pool = "0xD60A5d14dB690B7Afad71F76B108071D7175597d";
-async function setup(page: Page, decline = false, loseResponse = false) {
+async function setup(
+  page: Page,
+  decline = false,
+  loseResponse = false,
+  side: "fill" | "spark" = "fill",
+) {
+  const stock = "0xD5f3879160bc7c32ebb4dC785F8a4F505888de68";
+  const inputToken = side === "fill" ? cash : stock;
+  let stockUnits = side === "spark" ? 1392426465071569n : 1000000000000000000n;
   const sends: any[] = [];
   const txs = new Map<string, any>();
   let allowance = 0n,
@@ -72,10 +80,10 @@ async function setup(page: Page, decline = false, loseResponse = false) {
   await page.route("**/api/onchain/quote?*", (r) =>
     r.fulfill({
       json: {
-        side: "fill",
-        amountIn: "25",
-        amountOut: "0.035",
-        minimumOut: "0.034825",
+        side,
+        amountIn: side === "fill" ? "25" : "0.001392426465071569",
+        amountOut: side === "fill" ? "0.035" : "0.99",
+        minimumOut: side === "fill" ? "0.034825" : "0.98505",
         fee: 500,
         pool,
         blockNumber: "256",
@@ -111,6 +119,12 @@ async function setup(page: Page, decline = false, loseResponse = false) {
           result = "0x" + sends.length.toString(16);
         else if (method === "eth_getTransactionByHash") {
           const tx = txs.get(p[0]);
+          if (
+            side === "spark" &&
+            tx &&
+            tx.to.toLowerCase() === "0xcaf681a66d020601342297493863e78c959e5cb2"
+          )
+            stockUnits = 0n;
           result = tx
             ? {
                 ...tx,
@@ -131,7 +145,7 @@ async function setup(page: Page, decline = false, loseResponse = false) {
             return { jsonrpc: "2.0", id: item.id, result: null };
           }
           const tx = txs.get(p[0]);
-          if (tx && tx.to.toLowerCase() === cash.toLowerCase())
+          if (tx && tx.to.toLowerCase() === inputToken.toLowerCase())
             allowance = decodeFunctionData({
               abi: approvalAbi,
               data: tx.data as Hex,
@@ -165,14 +179,16 @@ async function setup(page: Page, decline = false, loseResponse = false) {
             transactions: [],
           };
         else if (selector === toFunctionSelector("decimals()"))
-          result = word(6n);
+          result = word(
+            p[0].to.toLowerCase() === stock.toLowerCase() ? 18n : 6n,
+          );
         else if (selector === toFunctionSelector("allowance(address,address)"))
           result = word(allowance);
         else if (selector === toFunctionSelector("balanceOf(address)"))
           result = word(
             p[0].to.toLowerCase() === cash.toLowerCase()
               ? 100000000n
-              : 1000000000000000000n,
+              : stockUnits,
           );
         else if (
           selector === toFunctionSelector("getPool(address,address,uint24)")
@@ -191,7 +207,7 @@ async function setup(page: Page, decline = false, loseResponse = false) {
               { type: "uint32" },
               { type: "uint256" },
             ],
-            [35000000000000000n, 1n, 0, 150000n],
+            [side === "fill" ? 35000000000000000n : 1000000n, 1n, 0, 150000n],
           );
         else if (method === "eth_call") result = word(1n);
         else throw Error("Unexpected fixture RPC " + method);
@@ -209,8 +225,14 @@ async function setup(page: Page, decline = false, loseResponse = false) {
   await page
     .getByRole("button", { name: "Browser wallet", exact: true })
     .click();
-  await page.getByRole("button", { name: "Fill", exact: true }).click();
-  await page.getByLabel("USDG to spend", { exact: true }).fill("25");
+  await page
+    .getByRole("button", {
+      name: side === "fill" ? "Fill" : "Spark",
+      exact: true,
+    })
+    .click();
+  if (side === "fill")
+    await page.getByLabel("USDG to spend", { exact: true }).fill("25");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
 
   return {
@@ -457,4 +479,40 @@ test("a failed read before the wallet request says nothing was sent and permits 
       `blunts:swap:4663:${owner}`,
     ),
   ).toEqual([]);
+});
+
+test("sell-all uses the exact holding and automatically confirms permission and sale", async ({
+  page,
+}) => {
+  const { sends } = await setup(page, false, false, "spark");
+  const signing = page.getByRole("region", { name: "Wallet signing" });
+  await signing.getByRole("checkbox").check();
+  await signing
+    .getByRole("button", { name: "Approve spending", exact: true })
+    .click();
+  await expect(
+    signing.getByRole("heading", {
+      name: "Now confirm your Spark.",
+      exact: true,
+    }),
+  ).toBeVisible({ timeout: 15000 });
+  expect(sends).toHaveLength(1);
+  expect(
+    decodeFunctionData({ abi: approvalAbi, data: sends[0].data }).args![1],
+  ).toBe(1392426465071569n);
+  await signing
+    .getByRole("button", { name: "Spark in wallet", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Spark complete.", exact: true }),
+  ).toBeVisible({ timeout: 15000 });
+  await expect(
+    signing.getByText("Your sale is confirmed.", { exact: true }),
+  ).toBeVisible();
+  expect(sends).toHaveLength(2);
+  await signing.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Spark", exact: true }).click();
+  await expect(
+    page.getByText("Your stash is empty. Fill it first.", { exact: true }),
+  ).toBeVisible();
 });

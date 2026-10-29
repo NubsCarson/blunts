@@ -202,7 +202,9 @@ export function WalletSigning({
           {plan.calls[next].kind !== "swap"
             ? "Allow this amount."
             : permissionConfirmed
-              ? "Now confirm your purchase."
+              ? plan.quote.side === "fill"
+                ? "Now confirm your Fill."
+                : "Now confirm your Spark."
               : "Confirm in your wallet."}
         </h3>
       )}
