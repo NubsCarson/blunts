@@ -10,9 +10,11 @@ Wallet-first local preview: normal EVM wallet + Robinhood Chain QQQ tokens, usin
 Shaw's original 3D tray and Fill/Spark design. No email signup or brokerage API keys
 are required by the active preview. **The owner has approved local wallet signing.**
 HTTP loopback web origins can request individual wallet approvals/swaps; no
-transaction is sent automatically. Hosted and native origins remain disabled.
+transaction is sent automatically. The owner also approved hosted signing on
+**https://blunt.nubs.site**, where the app is now live. Other hosted and native
+origins remain disabled.
 The wallet holder must be eligible for the issuer's tokens and personally approve
-every real-funds request. Publishing/deployment remain unapproved.
+every real-funds request. See [the production release record](docs/shipping-2026-10-28.md).
 
 ```sh
 npm ci
@@ -81,8 +83,9 @@ the historical portion of the resume notes. It is a simulated-money system.
 Stop running services before switching source branches or opening the same
 embedded database from a second process. Never reset/clean data to switch versions.
 
-Nothing is pushed, deployed or publicly published. The owner approved local
-signing controls; this agent has not used personal keys or executed a real trade.
+The public web app is deployed with the owner's approval. No source branch was
+pushed as part of this deployment. This agent has not used personal keys or
+executed a real trade.
 Passing tests below use disposable fixtures and local forks.
 
 

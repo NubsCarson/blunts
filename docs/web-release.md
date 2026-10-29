@@ -1,3 +1,12 @@
+# Current status: shipped with owner approval
+
+**https://blunt.nubs.site is live.** The owner explicitly approved publication,
+DNS/TLS work and exact-domain signing on October 28, 2026 (Pacific).
+See [the production release record](shipping-2026-10-28.md). The active release
+is the qualified Node container behind existing Traefik, not the Cloudflare edge
+experiment. Source `HOSTED_RELEASE_APPROVED=true`; other domains stay denied.
+The original local-only preparation below is a historical checkpoint.
+
 # Web release preparation — October 28, 2026
 
 The owner selected **https://blunt.nubs.site** (singular) as the temporary

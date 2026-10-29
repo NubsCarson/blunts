@@ -1,3 +1,29 @@
+# SHIPPED — October 28, 2026 (Pacific)
+
+Owner explicitly approved shipping. **https://blunt.nubs.site is live.**
+Production image `blunts:web-a2631e9` on `elizavps`; Docker container `blunts-web`,
+private bridge 172.30.46.1:8746 → app 8745; existing Kubernetes Traefik + Let's
+Encrypt ingress. Cloudflare DNS is A / DNS-only to 147.93.44.246.
+See [the production release record](shipping-2026-10-28.md) for actual receipts,
+rollback commands and limits. Source approval is true only for the exact domain.
+
+Verified live TLS, redirect, exact client bundle, market and both quote directions,
+real installed MetaMask connection/network switch/zero balances/quote/fee and
+insufficient-USDG guard. No personal signature or trade. Read-only rollback was
+actually activated and checked before restoring the approved release.
+
+The Cloudflare edge experiment remains on branch
+`codex/cloudflare-edge-candidate-20261028` (`86e80eb`). It stayed read-only and
+was detached from the domain after upstream public RPC 429s. The final active
+branch restored the previously qualified Node backend. Do not deploy the edge
+candidate as the current production target.
+
+Pre-existing VPS disk pressure prevents new Kubernetes pods. The final app is a
+bounded Docker process: read-only root, 64 MiB tmpfs, 512 MiB RAM, one CPU and
+20 MiB maximum rotated logs. No scheduling taint was bypassed, no disk cleanup
+or unrelated app restart was performed, and no custom firewall rules remain.
+Earlier local-only status below is historical and superseded by this approval.
+
 # Latest release handoff — October 28 (Pacific)
 
 **Keep local. Owner has not approved shipping.** Domain remains

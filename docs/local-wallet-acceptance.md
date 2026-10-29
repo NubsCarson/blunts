@@ -1,3 +1,12 @@
+# Public deployment added — October 28, 2026
+
+Owner approved shipping and https://blunt.nubs.site is deployed. Live installed
+MetaMask connection, network switch, balances, quotes, fee disclosure and the
+insufficient-USDG guard were checked without a signature. Full funded mainnet
+acceptance remains unperformed. See [production receipts and rollback](shipping-2026-10-28.md).
+The local-only acceptance map below is historical; it does not revoke the later
+explicit publication approval.
+
 # Blunts local wallet acceptance — October 28, 2026
 
 The owner subsequently clarified the active product is the normal Web3 **web
