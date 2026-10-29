@@ -1,4 +1,6 @@
-import { createHash, createPublicKey, verify, randomUUID } from "node:crypto";
+import { createPublicKey, verify, randomUUID } from "node:crypto";
+import { solanaMessageHash, verifySolanaReceipt } from "./solana-receipt.js";
+export { solanaMessageHash } from "./solana-receipt.js";
 import {
   Connection,
   PublicKey,
@@ -40,8 +42,6 @@ export const solanaConnection = new Connection(
   },
 );
 const key = (s: string) => new PublicKey(s);
-export const solanaMessageHash = (bytes: Uint8Array) =>
-  createHash("sha256").update(bytes).digest("hex");
 async function json(url: string) {
   const r = await fetch(url, {
     signal: AbortSignal.timeout(15000),
@@ -368,20 +368,12 @@ export async function solanaReceipt(signature: string, messageHash: string) {
     })
   ).value[0];
   if (!status) return { state: "pending" };
-  if (status.err)
-    return {
-      state: status.confirmationStatus === "finalized" ? "failed" : "pending",
-    };
   if (status.confirmationStatus !== "finalized") return { state: "pending" };
   const tx = await solanaConnection.getTransaction(signature, {
     commitment: "finalized",
     maxSupportedTransactionVersion: 0,
   });
-  if (
-    !tx?.meta ||
-    tx.meta.err ||
-    solanaMessageHash(tx.transaction.message.serialize()) !== messageHash
-  )
+  if (!tx)
     throw Error("Receipt did not match this trade. Keep this activity record.");
-  return { state: "complete", slot: tx.slot };
+  return verifySolanaReceipt(tx, messageHash);
 }

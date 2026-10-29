@@ -29,14 +29,17 @@ pushed or deployed.
   signature/message. Journal saves the signature before broadcasting, never
   signed bytes. Submit has no replay on an uncertain result. Same-wallet Web
   Locks cover signing and submission. Unknown receipts block another trade.
-- Automatic finalized receipt observation checks the original message hash.
+- Automatic finalized receipt observation checks the original message hash
+  for both success and failure, exact input spent, actual net token delivery
+  and the 1% output fee. Holder-as-fee-recipient uses the direct fee CPI to
+  separate combined balance changes. A mismatching receipt remains pending.
   Recovery survives reload, with activity export and an unsigned-review close
   action that cannot erase a sent transaction.
 
 ## Evidence and limits
 
 Private/local evidence: `data/review-20261028/mainnet-acceptance/solana-*`.
-90 unit checks passed (two optional legacy checks skipped), including exact
+94 unit checks passed (two optional legacy checks skipped), including exact
 raw units, fee-account derivation, mutated instructions, altered signatures,
 durable activity and duplicate blocking. Existing EVM browser regression:
 48 passed. Solana desktop/mobile fixtures exercise the complete buy/sell UI,
@@ -76,3 +79,11 @@ in the legacy Jayson/stream-json dependency chain. No claim of zero findings.
 
 Community-token integration remains deferred. No official mint was verified.
 Shipping this Solana route still requires owner approval after funded acceptance.
+
+Receipt follow-up: `npx tsx scripts/qualify-solana-receipt.ts SIGNATURE MESSAGE_HASH`
+performs read-only finalized receipt verification, with no signing or submission.
+The original hash must come from the saved review/activity, not from recomputing
+and trusting an unrelated transaction. Four additional settlement checks cover
+both directions, an unrelated failed receipt, mismatching token deltas/fees and
+the holder-as-fee-recipient case. These are deterministic fixtures, not mainnet
+acceptance. The personal Chrome review remains unsigned at this checkpoint.

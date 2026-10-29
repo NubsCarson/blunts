@@ -6,7 +6,7 @@ Run `npm run build` then `npm run start:solana`; preview is
 http://localhost:8753/sol. Separate loopback server, no deployment. Same scene,
 USDC/QQQx Fill/full-stash Spark, fixed fee, simulation, signature validation,
 durable activity and automatic finalized receipt observation are implemented.
-90 unit checks and 48 EVM browser regressions pass. Solana browser fixtures and
+94 unit checks and 48 EVM browser regressions pass. Solana browser fixtures and
 live unsigned simulations are distinct from funded acceptance, which is still
 waiting for holder wallet confirmation. Never agent-confirm a personal trade.
 The local actual Chrome tab is 1728114627 (browser 4), Phantom wallet 3Bpjj…yc3Q.
