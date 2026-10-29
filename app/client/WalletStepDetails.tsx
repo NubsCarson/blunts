@@ -1,7 +1,13 @@
 import { appFee, quoteAfterFee } from "../shared/app-fee";
 import { formatUnits } from "viem";
 import { verifiedSwapPlan, type SwapPlan } from "../shared/swap-plan";
-import { cash, stock, dex, robinhood } from "../shared/robinhood";
+import {
+  cash,
+  stock,
+  dex,
+  robinhood,
+  WALLET_CONFIRMATION_MS,
+} from "../shared/robinhood";
 export function WalletStepDetails({
   plan,
   expired,
@@ -9,12 +15,7 @@ export function WalletStepDetails({
   plan: SwapPlan;
   expired: boolean;
 }) {
-  if (expired)
-    return (
-      <p className="evm-fine">
-        Transaction details expired. Preview again to rebuild them.
-      </p>
-    );
+  if (expired) return null;
   let verified: SwapPlan;
   try {
     verified = verifiedSwapPlan(plan);
@@ -38,7 +39,7 @@ export function WalletStepDetails({
   );
   return (
     <details className="evm-step-details">
-      <summary>Review exact transaction details</summary>
+      <summary>Technical details</summary>
       <p>
         These are prepared requests only. No wallet request is opened by this
         review.
@@ -73,10 +74,12 @@ export function WalletStepDetails({
               </dd>
               <dt>Output recipient</dt>
               <dd>{addressLink(verified.owner)}</dd>
-              <dt>Expires</dt>
+              <dt>Wallet confirmation deadline</dt>
               <dd>
                 {new Date(
-                  Math.floor(verified.quote.expiresAt / 1000) * 1000,
+                  Math.floor(
+                    (verified.quote.expiresAt + WALLET_CONFIRMATION_MS) / 1000,
+                  ) * 1000,
                 ).toLocaleString()}
               </dd>
               <dt>Blunts fee</dt>

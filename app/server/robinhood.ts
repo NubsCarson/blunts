@@ -8,6 +8,7 @@ import {
 } from "viem";
 import {
   robinhood,
+  QUOTE_LIFETIME_MS,
   stock,
   cash,
   dex,
@@ -177,7 +178,7 @@ export async function quote(
     fee: best.fee,
     pool: best.pool,
     blockNumber: String(blockNumber),
-    expiresAt: Date.now() + 20000,
+    expiresAt: Date.now() + QUOTE_LIFETIME_MS,
     transactionsEnabled: false,
   };
 }

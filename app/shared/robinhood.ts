@@ -1,4 +1,6 @@
 import { defineChain, parseAbi } from "viem";
+export const QUOTE_LIFETIME_MS = 90_000;
+export const WALLET_CONFIRMATION_MS = 300_000;
 // Issuer registry and official Uniswap deployment manifest, verified 2026-10-28.
 export const robinhood = defineChain({
   id: 4663,

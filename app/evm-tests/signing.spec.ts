@@ -12,7 +12,8 @@ const owner = "0x1111111111111111111111111111111111111111",
 async function setup(page: Page, decline = false, loseResponse = false) {
   const sends: any[] = [];
   const txs = new Map<string, any>();
-  let allowance = 0n;
+  let allowance = 0n,
+    failNonce = false;
   await page.addInitScript(
     ({ owner, decline, loseResponse }) => {
       (window as any).ethereum = {
@@ -76,7 +77,7 @@ async function setup(page: Page, decline = false, loseResponse = false) {
         fee: 500,
         pool,
         blockNumber: "256",
-        expiresAt: Date.now() + 20000,
+        expiresAt: Date.now() + 90000,
         transactionsEnabled: true,
       },
     }),
@@ -92,6 +93,12 @@ async function setup(page: Page, decline = false, loseResponse = false) {
           p = item.params;
         let result: any;
         const selector = p?.[0]?.data?.slice(0, 10);
+        if (method === "eth_getTransactionCount" && failNonce)
+          return {
+            jsonrpc: "2.0",
+            id: item.id,
+            error: { code: -32000, message: "Fixture read unavailable" },
+          };
         if (method === "eth_chainId") result = "0x1237";
         else if (method === "eth_getBalance") result = "0xde0b6b3a7640000";
         else if (method === "eth_gasPrice") result = "0x989680";
@@ -196,12 +203,13 @@ async function setup(page: Page, decline = false, loseResponse = false) {
     .getByRole("button", { name: "Browser wallet", exact: true })
     .click();
   await page.getByRole("button", { name: "Fill", exact: true }).click();
-  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Review wallet steps", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
   return {
     sends,
+    failBeforeWallet: () => {
+      failNonce = true;
+    },
     addCancellation: () => {
       const hash = "0x" + "f".repeat(64);
       txs.set(hash, {
@@ -223,7 +231,7 @@ test("local signing requests finite approval and swap separately, with no automa
   const signing = page.getByRole("region", { name: "Wallet signing" });
   await expect(
     signing.getByRole("button", {
-      name: "Approve exact amount in wallet",
+      name: "Approve spending",
       exact: true,
     }),
   ).toBeDisabled();
@@ -234,12 +242,12 @@ test("local signing requests finite approval and swap separately, with no automa
   });
   await signing
     .getByRole("button", {
-      name: "Approve exact amount in wallet",
+      name: "Approve spending",
       exact: true,
     })
     .click();
   await expect(
-    signing.getByText("Request sent. Check its receipt before continuing.", {
+    signing.getByText("Sent. Waiting for network confirmation.", {
       exact: true,
     }),
   ).toBeVisible();
@@ -250,31 +258,30 @@ test("local signing requests finite approval and swap separately, with no automa
     decodeFunctionData({ abi: approvalAbi, data: sends[0].data }).args![1],
   ).toBe(25000000n);
   await signing
-    .getByRole("button", { name: "Check wallet receipt", exact: true })
+    .getByRole("button", { name: "Check status", exact: true })
     .click();
   await expect(
     signing.getByRole("button", {
-      name: "Confirm swap in wallet",
+      name: "Fill in wallet",
       exact: true,
     }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   expect(sends).toHaveLength(1);
   await signing.getByRole("checkbox").check();
   await signing
-    .getByRole("button", { name: "Confirm swap in wallet", exact: true })
+    .getByRole("button", { name: "Fill in wallet", exact: true })
     .click();
   await expect(
-    signing.getByRole("button", { name: "Check wallet receipt", exact: true }),
+    signing.getByRole("button", { name: "Check status", exact: true }),
   ).toBeVisible();
   expect(sends).toHaveLength(2);
   await signing
-    .getByRole("button", { name: "Check wallet receipt", exact: true })
+    .getByRole("button", { name: "Check status", exact: true })
     .click();
   await expect(
-    signing.getByText(
-      "All steps included on Robinhood Chain. Ethereum finality is not checked.",
-      { exact: true },
-    ),
+    signing.getByText("Your swap was confirmed on Robinhood Chain.", {
+      exact: true,
+    }),
   ).toBeVisible();
   expect(sends).toHaveLength(2);
 });
@@ -286,21 +293,21 @@ test("declining a local signing prompt retains cancellation and never starts a s
   await signing.getByRole("checkbox").check();
   await signing
     .getByRole("button", {
-      name: "Approve exact amount in wallet",
+      name: "Approve spending",
       exact: true,
     })
     .click();
-  await expect(signing.getByText(/Wallet request declined/)).toBeVisible();
+  await expect(signing.getByText(/You cancelled in your wallet/)).toBeVisible();
   expect(sends).toHaveLength(0);
   await expect(
     signing.getByRole("button", {
-      name: "Confirm swap in wallet",
+      name: "Fill in wallet",
       exact: true,
     }),
   ).toHaveCount(0);
   await expect(
     signing.getByRole("button", {
-      name: "Refresh quote and review",
+      name: "Update price",
       exact: true,
     }),
   ).toBeVisible();
@@ -314,21 +321,27 @@ test("unknown wallet outcome blocks another local signing request even after a n
   await signing.getByRole("checkbox").check();
   await signing
     .getByRole("button", {
-      name: "Approve exact amount in wallet",
+      name: "Approve spending",
       exact: true,
     })
     .click();
-  await expect(signing.getByText(/Wallet outcome is unknown/)).toBeVisible();
+  await expect(
+    signing.getByText(/Check your wallet activity before continuing/),
+  ).toBeVisible();
   expect(sends).toHaveLength(1);
-  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
   await page
-    .getByRole("button", { name: "Review wallet steps", exact: true })
+    .getByRole("button", { name: "Change amount", exact: true })
     .click();
+  await page.getByLabel("USDG to spend", { exact: true }).fill("25.0");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
   signing = page.getByRole("region", { name: "Wallet signing" });
-  await expect(signing.getByText(/Wallet outcome is unknown/)).toBeVisible();
+  await expect(
+    signing.getByText(/Check your wallet activity before continuing/),
+  ).toBeVisible();
   await expect(
     signing.getByRole("button", {
-      name: "Approve exact amount in wallet",
+      name: "Approve spending",
       exact: true,
     }),
   ).toHaveCount(0);
@@ -343,12 +356,12 @@ test("tracking an included wallet cancellation preserves the original attempt an
   await signing.getByRole("checkbox").check();
   await signing
     .getByRole("button", {
-      name: "Approve exact amount in wallet",
+      name: "Approve spending",
       exact: true,
     })
     .click();
   await expect(
-    signing.getByText("Request sent. Check its receipt before continuing.", {
+    signing.getByText("Sent. Waiting for network confirmation.", {
       exact: true,
     }),
   ).toBeVisible();
@@ -375,15 +388,50 @@ test("tracking an included wallet cancellation preserves the original attempt an
   expect(sends).toHaveLength(1);
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Fill", exact: true }).click();
-  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Review wallet steps", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
   await expect(
     page.getByRole("region", { name: "Wallet signing" }).getByRole("button", {
-      name: "Approve exact amount in wallet",
+      name: "Approve spending",
       exact: true,
     }),
   ).toBeDisabled();
   expect(sends).toHaveLength(1);
+});
+
+test("time spent reading does not expire the review after twenty seconds", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const { sends } = await setup(page);
+  const signing = page.getByRole("region", { name: "Wallet signing" });
+  await expect(signing).toBeVisible();
+  await page.clock.fastForward(25000);
+  await signing.getByRole("checkbox").check();
+  await expect(
+    signing.getByRole("button", { name: "Approve spending", exact: true }),
+  ).toBeEnabled();
+  expect(sends).toHaveLength(0);
+});
+test("a failed read before the wallet request says nothing was sent and permits refreshing", async ({
+  page,
+}) => {
+  const { sends, failBeforeWallet } = await setup(page);
+  failBeforeWallet();
+  const signing = page.getByRole("region", { name: "Wallet signing" });
+  await signing.getByRole("checkbox").check();
+  await signing
+    .getByRole("button", { name: "Approve spending", exact: true })
+    .click();
+  await expect(signing.getByRole("alert")).toContainText("Nothing was sent");
+  await expect(
+    signing.getByRole("button", { name: "Update price", exact: true }),
+  ).toBeEnabled();
+  expect(sends).toHaveLength(0);
+  expect(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key) ?? "[]"),
+      `blunts:swap:4663:${owner}`,
+    ),
+  ).toEqual([]);
 });

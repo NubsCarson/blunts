@@ -35,7 +35,8 @@ export function WalletSigning({
   const [records, setRecords] = useState<SwapAttempt[]>([]),
     [eligible, setEligible] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [walletOpen, setWalletOpen] = useState(false);
   const flight = useRef(false),
     epoch = useRef(0);
   const enabled =
@@ -101,28 +102,61 @@ export function WalletSigning({
       return;
     flight.current = true;
     setBusy(true);
+    setWalletOpen(false);
     setError("");
     const version = epoch.current;
     try {
       const { requestWalletStep } = await import("./wallet-execution");
-      await requestWalletStep(plan, next, wallet);
+      await requestWalletStep(plan, next, {
+        request: (args) => {
+          if (
+            args.method === "eth_sendTransaction" &&
+            version === epoch.current
+          )
+            setWalletOpen(true);
+          return wallet.request(args);
+        },
+      });
       if (version === epoch.current) {
         setRecords(
           new SwapJournal(window.localStorage, plan.owner, 4663).read(),
         );
-        setEligible(false);
       }
-    } catch {
+    } catch (failure) {
       if (version === epoch.current) {
-        setError(
-          "Wallet request did not finish. Check Activity before trying again; no automatic retry was made.",
-        );
         try {
-          setRecords(
-            new SwapJournal(window.localStorage, plan.owner, 4663).read(),
+          const saved = new SwapJournal(
+            window.localStorage,
+            plan.owner,
+            4663,
+          ).read();
+          setRecords(saved);
+          const attempt = saved.find(
+            (r) => r.planId === plan.id && r.step === next,
           );
+          if (attempt) {
+            setError("Check this request in your wallet before trying again.");
+          } else if (
+            failure instanceof Error &&
+            /expired|Price moved|reference/i.test(failure.message)
+          ) {
+            setError("The price needs updating. Nothing was sent.");
+          } else if (
+            failure instanceof Error &&
+            /Wallet changed|wallet and reader/i.test(failure.message)
+          ) {
+            setError(
+              "Your wallet changed. Reconnect and try again. Nothing was sent.",
+            );
+          } else {
+            setError(
+              "We couldn't prepare this request. Nothing was sent. Update the price to try again.",
+            );
+          }
         } catch {
-          /* Preserve unreadable records. */
+          setError(
+            "We couldn't read your activity. Check your wallet before trying again.",
+          );
         }
       }
     } finally {
@@ -133,16 +167,19 @@ export function WalletSigning({
   if (!enabled) return null;
   return (
     <section className="evm-signing" aria-label="Wallet signing">
-      <h3>Confirm in your wallet</h3>
-      <p>
-        This uses real wallet funds on Robinhood Chain. Nothing is submitted
-        until you choose a step and approve it in your wallet.
-      </p>
-      {next < 0 ? (
-        <p role="status">
-          All steps included on Robinhood Chain. Ethereum finality is not
-          checked.
+      <h3>
+        {next >= 0 && plan.calls[next].kind !== "swap"
+          ? "Allow this amount."
+          : "Finish in your wallet."}
+      </h3>
+      {next >= 0 && plan.calls[next].kind !== "swap" && (
+        <p>
+          First, give permission to use only this amount. This doesn't buy
+          anything yet.
         </p>
+      )}
+      {next < 0 ? (
+        <p role="status">Your swap was confirmed on Robinhood Chain.</p>
       ) : (
         <>
           {pending ? (
@@ -150,10 +187,10 @@ export function WalletSigning({
               <p>
                 {pending.state === "unknown" ||
                 pending.state === "awaiting_wallet"
-                  ? "Wallet outcome is unknown. Find the hash in your wallet and use Activity."
+                  ? "Check your wallet activity before continuing."
                   : pending.state === "pending"
-                    ? "Request sent. Check its receipt before continuing."
-                    : "This request needs reconciliation in Activity."}
+                    ? "Sent. Waiting for network confirmation."
+                    : "Check this request in Activity before continuing."}
               </p>
               {pending.hash && (
                 <button
@@ -161,18 +198,18 @@ export function WalletSigning({
                   disabled={busy}
                   onClick={() => void check(pending)}
                 >
-                  Check wallet receipt
+                  Check status
                 </button>
               )}
             </div>
           ) : existing ? (
             <p role="status">
               {existing.state === "cancelled"
-                ? "Wallet request declined. No next step was started."
+                ? "You cancelled in your wallet. Nothing else was started."
                 : existing.state === "replaced"
-                  ? "This request was replaced in your wallet. Review a fresh quote."
+                  ? "This request was replaced in your wallet. Get a fresh price."
                   : "This step already has an attempt."}{" "}
-              Preview again only after checking your wallet activity.
+              Check your wallet activity before continuing.
             </p>
           ) : (
             <>
@@ -182,8 +219,8 @@ export function WalletSigning({
                   checked={eligible}
                   onChange={(e) => setEligible(e.target.checked)}
                 />
-                I am eligible under the issuer’s restrictions, including that I
-                am not a US person.
+                I meet the token’s eligibility rules, including not being a U.S.
+                person.
               </label>
               <a
                 href="https://docs.robinhood.com/chain/stock-tokens/"
@@ -205,21 +242,26 @@ export function WalletSigning({
                 onClick={() => void sign()}
               >
                 {busy
-                  ? "Waiting for wallet…"
+                  ? walletOpen
+                    ? "Confirm in your wallet…"
+                    : "Checking your wallet…"
                   : plan.calls[next].kind === "reset"
-                    ? "Clear allowance in wallet"
+                    ? "Reset spending permission"
                     : plan.calls[next].kind === "approve"
-                      ? "Approve exact amount in wallet"
-                      : "Confirm swap in wallet"}
+                      ? "Approve spending"
+                      : plan.quote.side === "fill"
+                        ? "Fill in wallet"
+                        : "Spark in wallet"}
               </button>
             </>
           )}
           {(expired ||
             existing?.state === "cancelled" ||
-            existing?.state === "replaced") &&
+            existing?.state === "replaced" ||
+            error) &&
             !pending && (
               <button type="button" disabled={busy} onClick={onRefresh}>
-                Refresh quote and review
+                Update price
               </button>
             )}
         </>
@@ -229,11 +271,6 @@ export function WalletSigning({
           {error}
         </p>
       )}
-      <p className="evm-fine">
-        Each step is separate. Declining a prompt does not start the next step.
-        Approval alone does not buy QQQ. A new quote may be needed after
-        approval.
-      </p>
     </section>
   );
 }

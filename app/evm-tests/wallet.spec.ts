@@ -170,7 +170,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
         fee: 500,
         pool: "0xD60A5d14dB690B7Afad71F76B108071D7175597d",
         blockNumber: "1",
-        expiresAt: Date.now() + 20000,
+        expiresAt: Date.now() + 90000,
         transactionsEnabled: false,
       },
     }),
@@ -185,45 +185,32 @@ test("wallet-first preview connects without signup, reads balances and never sen
     .getByRole("button", { name: "Browser wallet", exact: true })
     .click();
   await expect(
-    page.getByText("100 USDG available", { exact: true }),
+    page.getByText("100.00 USDG available", { exact: true }),
   ).toBeVisible();
   await expect(page.locator(".scene-value")).toHaveText("$770.00");
   await page.getByRole("button", { name: "Fill", exact: true }).click();
-  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByText("0.03465 QQQ", { exact: true })).toBeVisible();
   await expect(
-    page.getByText(
-      "Preview: wallet approvals and swaps are disabled. No funds will move.",
-    ),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Review wallet steps", exact: true })
-    .click();
-  await expect(
-    page.getByRole("region", { name: "Prepared wallet steps" }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Approve only 25 USDG", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Review only. Wallet signing is disabled.", {
+    page.getByText("Preview only. Wallet approvals and swaps are disabled.", {
       exact: true,
     }),
   ).toBeVisible();
+
+  await expect(
+    page.getByRole("region", { name: "Prepared wallet steps" }),
+  ).toBeVisible();
+
   expect(
     await page.evaluate(() => (window as any).fixtureWalletRequests),
   ).toEqual(["eth_requestAccounts", "eth_chainId"]);
-  await expect(
-    page.getByText(/Your ETH balance covers this estimate/),
-  ).toBeVisible();
-  await page
-    .getByText("Review exact transaction details", { exact: true })
-    .click();
+
+  await page.getByText("Technical details", { exact: true }).click();
   await expect(
     page.getByText("Robinhood Chain · 4663", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("0.03447675 QQQ", { exact: true })).toBeVisible();
-  await expect(page.getByText("0.00035 QQQ", { exact: true })).toBeVisible();
+  await expect(page.getByText(/1% of received QQQ/)).toBeVisible();
   await expect(
     page.getByRole("link").filter({ hasText: /^0x4a27/i }),
   ).toHaveAttribute(
@@ -243,9 +230,7 @@ test("wallet-first preview connects without signup, reads balances and never sen
     "href",
     "https://robinhoodchain.blockscout.com/address/0xcaf681a66d020601342297493863e78c959e5cb2",
   );
-  await page
-    .getByText("Review exact transaction details", { exact: true })
-    .click();
+  await page.getByText("Technical details", { exact: true }).click();
 
   await page.screenshot({ path: info.outputPath("prepared-wallet-steps.png") });
   await page.getByRole("button", { name: "Close", exact: true }).click();
@@ -366,10 +351,9 @@ test("wallet-first preview connects without signup, reads balances and never sen
     "25",
   );
   await expect(
-    page.getByText(
-      "Saved amount restored. Preview again for a fresh price and wallet review.",
-      { exact: true },
-    ),
+    page.getByText("Your saved amount is ready. Continue for a fresh price.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.locator(".evm-quote")).toHaveCount(0);
   expect(
@@ -377,13 +361,11 @@ test("wallet-first preview connects without signup, reads balances and never sen
   ).toEqual(["eth_requestAccounts", "eth_chainId"]);
   await page.screenshot({ path: info.outputPath("resumed-review.png") });
   nativeEth = "0x0";
-  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Review wallet steps", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
   await expect(
     page.getByText(
-      "Add ETH on Robinhood Chain for network fees. Your current ETH balance is zero.",
+      "Add a little ETH on Robinhood Chain to pay the network fee.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -395,10 +377,8 @@ test("wallet-first preview connects without signup, reads balances and never sen
   cashUnits = 0n;
   nativeEth = "0xde0b6b3a7640000";
   await page.getByRole("button", { name: "Fill", exact: true }).click();
-  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Review wallet steps", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
   await expect(page.getByRole("alert")).toHaveText(
     "Not enough USDG in this wallet.",
   );
@@ -436,18 +416,18 @@ test("wallet-first preview connects without signup, reads balances and never sen
         fee: 500,
         pool: wallet,
         blockNumber: "1",
-        expiresAt: Date.now() + 20000,
+        expiresAt: Date.now() + 90000,
         transactionsEnabled: false,
       },
     });
   });
   await page.getByRole("button", { name: "Fill", exact: true }).click();
-  await page.getByRole("button", { name: "Preview swap", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await quoteHeld;
   await page.evaluate(() => (window as any).fixtureChainChanged("0x1"));
   releaseQuote();
   await expect(
-    page.getByRole("button", { name: "Preview swap", exact: true }),
+    page.getByRole("button", { name: "Continue", exact: true }),
   ).toBeEnabled();
   await expect(page.locator(".evm-quote")).toHaveCount(0);
   await expect(page.locator(".scene-value")).toHaveText("—");

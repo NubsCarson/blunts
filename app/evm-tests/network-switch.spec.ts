@@ -111,7 +111,7 @@ for (const eventBeforeAck of [true, false])
     await page.getByRole("button", { name: "Close", exact: true }).click();
     if (eventBeforeAck)
       await expect(
-        page.getByText("100 USDG available", { exact: true }),
+        page.getByText("100.00 USDG available", { exact: true }),
       ).toBeVisible();
     await page.evaluate(async () => {
       (window as any).fixtureSwitchDone();
@@ -120,7 +120,7 @@ for (const eventBeforeAck of [true, false])
       );
     });
     await expect(
-      page.getByText("100 USDG available", { exact: true }),
+      page.getByText("100.00 USDG available", { exact: true }),
     ).toBeVisible();
     // Real wallets may announce the same chain or account again. Those events
     // invalidate prior reads even though the scalar identity did not change.
@@ -132,7 +132,7 @@ for (const eventBeforeAck of [true, false])
         );
       }, kind);
       await expect(
-        page.getByText("100 USDG available", { exact: true }),
+        page.getByText("100.00 USDG available", { exact: true }),
       ).toBeVisible();
     }
     await expect(

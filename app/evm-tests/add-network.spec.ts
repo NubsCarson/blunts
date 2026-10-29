@@ -174,7 +174,7 @@ for (const mode of ["missing", "declined"] as const)
     ).toBeVisible();
     await page.getByRole("button", { name: "Close", exact: true }).click();
     await expect(
-      page.getByText("0 USDG available", { exact: true }),
+      page.getByText("0.00 USDG available", { exact: true }),
     ).toBeVisible();
     expect(
       await page.evaluate(() =>

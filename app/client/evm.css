@@ -286,11 +286,7 @@
 .evm-wallet-help p {
   margin-top: 12px;
 }
-.evm-signing {
-  margin: 20px 0;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
-}
+
 .evm-signing h3 {
   font-size: 16px;
   line-height: 1.4;
@@ -312,4 +308,61 @@
 .evm-finality p:first-child {
   font-weight: 700;
   color: var(--gold);
+}
+
+.evm-available {
+  margin: -4px 0 18px;
+  font-size: 12px !important;
+  color: var(--dim) !important;
+}
+.evm-purpose {
+  margin-bottom: 20px;
+}
+.evm-price-details {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.evm-price-details summary {
+  cursor: pointer;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+.evm-signing {
+  margin: 8px 0 18px;
+  padding-top: 0;
+  border: 0;
+}
+.evm-signing > h3 {
+  margin-top: 0;
+}
+.evm-signing > p {
+  font-size: 13px;
+}
+.evm-quote .evm-signing label {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.evm-spend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.evm-spend strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+  color: var(--paper);
+}
+.evm-sheet .evm-edit {
+  background: none;
+  border: 0;
+  color: var(--gold);
+  padding: 6px;
+  font-size: 12px;
+  min-height: 44px;
 }

@@ -8,7 +8,14 @@ import {
   type Hex,
 } from "viem";
 import { z } from "zod";
-import { amountUnits, cash, dex, stock, type SwapQuote } from "./robinhood.js";
+import {
+  amountUnits,
+  cash,
+  dex,
+  stock,
+  WALLET_CONFIRMATION_MS,
+  type SwapQuote,
+} from "./robinhood.js";
 import { appFee } from "./app-fee.js";
 export const approvalAbi = parseAbi([
   "function approve(address spender,uint256 amount) returns(bool)",
@@ -61,7 +68,11 @@ export function swapPlan(
 ): SwapPlan {
   const quote = quoteSchema.parse(raw);
   const account = getAddress(address.parse(owner));
-  if (allowance < 0n || quote.expiresAt <= now || quote.expiresAt > now + 30000)
+  if (
+    allowance < 0n ||
+    quote.expiresAt <= now ||
+    quote.expiresAt > now + 120000
+  )
     throw Error("Quote expired or invalid. Preview again.");
   const input = quote.side === "fill" ? cash : stock,
     output = quote.side === "fill" ? stock : cash;
@@ -124,7 +135,10 @@ export function swapPlan(
     data: encodeFunctionData({
       abi: routerAbi,
       functionName: "multicall",
-      args: [BigInt(Math.floor(quote.expiresAt / 1000)), [data, sweep]],
+      args: [
+        BigInt(Math.floor((quote.expiresAt + WALLET_CONFIRMATION_MS) / 1000)),
+        [data, sweep],
+      ],
     }),
   });
   const id = keccak256(

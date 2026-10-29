@@ -79,7 +79,7 @@ const walletLessons = [
   },
   {
     title: "Spark back to USDG.",
-    body: "Spark previews selling QQQ tokens back into USDG in the same wallet. It does not withdraw dollars to a bank. This local build previews and checks transactions only: wallet signing and swaps are disabled.",
+    body: "Spark previews selling QQQ tokens back into USDG in the same wallet. It does not withdraw dollars to a bank. This version is read-only: wallet signing and swaps are disabled.",
     facts: [
       ["Spark", "QQQ → USDG"],
       ["Local preview", "No funds move"],
@@ -102,7 +102,7 @@ export function HowItWorks({
     mode === "wallet" && signingEnabled && step === 4
       ? {
           ...lessons[step],
-          body: "Spark sells QQQ tokens back into USDG in the same wallet. It does not withdraw dollars to a bank. In this approved local build, choose each step and review its real-funds request in your wallet. Declining does not start the next step.",
+          body: "Spark sells QQQ tokens back into USDG in the same wallet. It does not withdraw dollars to a bank. Your wallet asks you to confirm each action. Cancelling stops that action.",
         }
       : lessons[step];
   function move(delta: number) {

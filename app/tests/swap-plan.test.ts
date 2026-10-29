@@ -89,7 +89,10 @@ test("swap calldata fixes token pair, own recipient, exact finite approval, min 
     data: plan.calls[1].data,
   });
   assert.equal(outer.functionName, "multicall");
-  assert.equal(outer.args![0], BigInt(Math.floor(q.expiresAt / 1000)));
+  assert.equal(
+    outer.args![0],
+    BigInt(Math.floor((q.expiresAt + 300000) / 1000)),
+  );
   const inner = decodeFunctionData({
     abi: routerAbi,
     data: (outer.args![1] as Hex[])[0],
@@ -114,7 +117,7 @@ test("swap calldata fixes token pair, own recipient, exact finite approval, min 
   );
   for (const change of [
     { expiresAt: Date.now() - 1 },
-    { expiresAt: Date.now() + 100000 },
+    { expiresAt: Date.now() + 180000 },
     { minimumOut: "0.0001" },
     { fee: 100 },
     { side: "withdraw" },

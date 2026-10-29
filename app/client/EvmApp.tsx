@@ -1,3 +1,4 @@
+import { formatTokenAmount } from "./format-token";
 import { quoteAfterFee } from "../shared/app-fee";
 import { executionPolicyForOrigin } from "../shared/execution-policy";
 import { WalletSigning } from "./WalletSigning";
@@ -82,7 +83,6 @@ export function EvmApp() {
   const networkInFlight = useRef(false);
   const quoteEpoch = useRef(0);
   const balanceEpoch = useRef(0);
-  const preparedSection = useRef<HTMLElement>(null);
   const epoch = useRef(0),
     dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -160,6 +160,8 @@ export function EvmApp() {
     else dialog.current?.close();
     setError("");
     setQuote(null);
+    setPrepared(null);
+    setStepFee(null);
   }, [panel]);
   useEffect(() => {
     if (!quote) return;
@@ -344,15 +346,6 @@ export function EvmApp() {
     setFeeUnavailable(false);
   }, [quote, account, chain]);
   useEffect(() => {
-    if (prepared)
-      preparedSection.current?.scrollIntoView({
-        block: "nearest",
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "auto"
-          : "smooth",
-      });
-  }, [prepared]);
-  useEffect(() => {
     setSavedReview(null);
     setReviewStorageError("");
     setRestoredReview(false);
@@ -376,7 +369,8 @@ export function EvmApp() {
     setPanel(savedReview.side);
     setRestoredReview(true);
   }
-  async function reviewSteps() {
+  async function reviewSteps(reviewQuote: SwapQuote | null = quote) {
+    const quote = reviewQuote;
     if (!quote || quote.side !== panel || !account || chain !== 4663 || !market)
       return;
     const version = quoteEpoch.current,
@@ -420,6 +414,8 @@ export function EvmApp() {
     setBusy(true);
     setError("");
     setQuote(null);
+    setPrepared(null);
+    setStepFee(null);
     try {
       amountUnits(amount, panel === "fill" ? 6 : 18);
       const response = await request(
@@ -429,8 +425,10 @@ export function EvmApp() {
       );
       const data = response.data;
       if (!response.ok) throw Error(data.error);
-      if (version === quoteEpoch.current && identity === epoch.current)
+      if (version === quoteEpoch.current && identity === epoch.current) {
         setQuote(data);
+        if (account && chain === 4663 && market) await reviewSteps(data);
+      }
     } catch (e) {
       if (version === quoteEpoch.current && identity === epoch.current)
         setError(
@@ -495,7 +493,7 @@ export function EvmApp() {
           <div className="scene-cash">
             {account
               ? balances
-                ? `${formatUnits(balances.cash, 6)} USDG available`
+                ? `${formatTokenAmount(formatUnits(balances.cash, 6), "USDG")} USDG available`
                 : "Wallet balance unavailable"
               : "Your wallet. Your stash."}
           </div>
@@ -633,8 +631,7 @@ export function EvmApp() {
                         <p>
                           {savedReview.side === "fill" ? "Fill" : "Spark"} ·{" "}
                           {savedReview.amount}{" "}
-                          {savedReview.side === "fill" ? "USDG" : "QQQ"} · never
-                          submitted
+                          {savedReview.side === "fill" ? "USDG" : "QQQ"}
                         </p>
                         <button onClick={resumeReview}>
                           Resume{" "}
@@ -755,143 +752,138 @@ export function EvmApp() {
           ) : (
             <>
               <h1>
-                {panel === "fill" ? "Fill your stash." : "Spark it back."}
+                {prepared
+                  ? panel === "fill"
+                    ? "Review your Fill."
+                    : "Review your Spark."
+                  : panel === "fill"
+                    ? "Fill your stash."
+                    : "Spark it back."}
               </h1>
-              <p>
-                {panel === "fill" ? "USDG → QQQ token" : "QQQ token → USDG"}
-              </p>
-              {restoredReview && (
-                <p className="evm-note" role="status">
-                  Saved amount restored. Preview again for a fresh price and
-                  wallet review.
-                </p>
+              {prepared ? (
+                <div className="evm-spend">
+                  <span>
+                    You spend{" "}
+                    <strong>
+                      {formatTokenAmount(
+                        prepared.quote.amountIn,
+                        panel === "fill" ? "USDG" : "QQQ",
+                      )}{" "}
+                      {panel === "fill" ? "USDG" : "QQQ"}
+                    </strong>
+                  </span>
+                  <button
+                    className="evm-edit"
+                    onClick={() => {
+                      quoteEpoch.current++;
+                      setQuote(null);
+                      setPrepared(null);
+                      setStepFee(null);
+                      setError("");
+                    }}
+                  >
+                    Change amount
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="evm-purpose">
+                    {panel === "fill"
+                      ? "Turn your wallet balance into a stash of QQQ tokens."
+                      : "Sell QQQ tokens back into your wallet."}
+                  </p>
+                  {restoredReview && (
+                    <p role="status" className="evm-available">
+                      Your saved amount is ready. Continue for a fresh price.
+                    </p>
+                  )}
+                  <label className="evm-amount">
+                    {panel === "fill" ? "USDG to spend" : "QQQ tokens to sell"}
+                    <input
+                      inputMode="decimal"
+                      value={amount}
+                      onChange={(e) => {
+                        quoteEpoch.current++;
+                        setRestoredReview(false);
+                        setAmount(e.target.value);
+                        setQuote(null);
+                        setError("");
+                      }}
+                    />
+                  </label>
+                  {balances && (
+                    <p className="evm-available">
+                      Available:{" "}
+                      {formatTokenAmount(
+                        formatUnits(
+                          panel === "fill" ? balances.cash : balances.stock,
+                          panel === "fill" ? 6 : 18,
+                        ),
+                        panel === "fill" ? "USDG" : "QQQ",
+                      )}{" "}
+                      {panel === "fill" ? "USDG" : "QQQ"}
+                    </p>
+                  )}
+                  {!prepared && (
+                    <button
+                      className="primary"
+                      disabled={busy || !market}
+                      onClick={() => void preview()}
+                    >
+                      {busy ? "Checking your balance and price…" : "Continue"}
+                    </button>
+                  )}
+                </>
               )}
-              <label className="evm-amount">
-                {panel === "fill" ? "USDG to spend" : "QQQ tokens to sell"}
-                <input
-                  inputMode="decimal"
-                  value={amount}
-                  onChange={(e) => {
-                    quoteEpoch.current++;
-                    setRestoredReview(false);
-                    setAmount(e.target.value);
-                    setQuote(null);
-                  }}
-                />
-              </label>
-              <button
-                className="primary"
-                disabled={busy || !market}
-                onClick={() => void preview()}
-              >
-                {busy ? "Checking pools…" : "Preview swap"}
-              </button>
               {quote && quote.side === panel && (
                 <div className="evm-quote" role="status">
                   <div>
                     <span>You receive approximately</span>
                     <strong>
-                      {quoteAfterFee(quote).amountOut}{" "}
+                      {formatTokenAmount(
+                        quoteAfterFee(quote).amountOut,
+                        panel === "fill" ? "QQQ" : "USDG",
+                      )}{" "}
                       {panel === "fill" ? "QQQ" : "USDG"}
                     </strong>
                   </div>
                   <p>
-                    Minimum {quoteAfterFee(quote).minimumOut}{" "}
-                    {panel === "fill" ? "QQQ" : "USDG"} · 0.5% slippage
+                    At least{" "}
+                    {formatTokenAmount(
+                      quoteAfterFee(quote).minimumOut,
+                      panel === "fill" ? "QQQ" : "USDG",
+                    )}{" "}
+                    {panel === "fill" ? "QQQ" : "USDG"}.
                   </p>
-                  <p>
-                    Blunts fee 1% · approximately{" "}
-                    {quoteAfterFee(quote).feeAmount}{" "}
-                    {quoteAfterFee(quote).symbol}, already deducted above.
-                    Uniswap pool fee {quote.fee / 10000}% and ETH gas are
-                    separate.
-                  </p>
-                  {quote.referenceShortfallBps !== undefined && (
-                    <p>
-                      {quote.referenceShortfallBps === 0
-                        ? "At or above the reference output"
-                        : `${(quote.referenceShortfallBps / 100).toFixed(2)}% below reference output`}{" "}
-                      · pool output before the Blunts fee
-                    </p>
+                  <p>1% Blunts fee included. Network fee extra.</p>
+                  {!prepared && clock >= quote.expiresAt && (
+                    <p>Get a fresh price to continue.</p>
                   )}
-                  <p>
-                    {clock >= quote.expiresAt
-                      ? "Quote expired. Preview again."
-                      : `Quote valid for ${Math.max(0, Math.ceil((quote.expiresAt - clock) / 1000))}s`}
-                  </p>
-                  <button
-                    disabled={
-                      busy ||
-                      !account ||
-                      chain !== 4663 ||
-                      clock >= quote.expiresAt
-                    }
-                    onClick={() => void reviewSteps()}
-                  >
-                    {busy ? "Verifying wallet steps…" : "Review wallet steps"}
-                  </button>
                   {prepared && (
                     <section
                       className="evm-plan"
                       aria-label="Prepared wallet steps"
-                      ref={preparedSection}
                     >
-                      <h2>Your wallet would confirm</h2>
-                      <ol>
-                        {prepared.calls.map((call, index) => (
-                          <li key={index}>
-                            {call.kind === "reset"
-                              ? "Clear the previous token allowance"
-                              : call.kind === "approve"
-                                ? `Approve only ${quote.amountIn} ${panel === "fill" ? "USDG" : "QQQ"}`
-                                : "Swap with the displayed minimum output"}
-                          </li>
-                        ))}
-                      </ol>
-                      <WalletStepDetails
-                        plan={prepared}
-                        expired={clock >= quote.expiresAt}
-                      />
                       {stepFee?.status === "needs_eth" && (
-                        <p>
-                          Add ETH on Robinhood Chain for network fees. Your
-                          current ETH balance is zero.
+                        <p className="evm-error">
+                          Add a little ETH on Robinhood Chain to pay the network
+                          fee.
                         </p>
                       )}
-                      {stepFee?.status === "estimated" && (
-                        <p>
-                          First step fee estimate:{" "}
-                          {formatUnits(stepFee.estimatedFeeWei, 18)} ETH (20%
-                          gas buffer).{" "}
-                          {stepFee.hasEnoughEth
-                            ? "Your ETH balance covers this estimate."
-                            : "Not enough ETH for this estimate."}{" "}
-                          Your wallet confirms the final fee.
-                        </p>
-                      )}
+                      {stepFee?.status === "estimated" &&
+                        !stepFee.hasEnoughEth && (
+                          <p className="evm-error">
+                            Add a little ETH to cover the network fee.
+                          </p>
+                        )}
                       {feeUnavailable && (
-                        <p>
-                          Network fee could not be estimated. Refresh the quote
-                          before signing.
+                        <p className="evm-error">
+                          We couldn't check the network fee. Update the price to
+                          try again.
                         </p>
                       )}
-                      <p>
-                        Saved for this wallet. Reloading requires a fresh quote.
-                      </p>
-                      <p>
-                        Tokens return to your connected wallet. Network fees are
-                        paid in ETH.
-                      </p>
-                      <p>
-                        {clock >= quote.expiresAt
-                          ? "This plan expired. Preview again."
-                          : signingEnabled
-                            ? "Review each request in your wallet before approving."
-                            : "Review only. Wallet signing is disabled."}
-                      </p>
                       {provider && (
                         <WalletSigning
-                          key={prepared.id}
                           plan={prepared}
                           wallet={provider}
                           fee={stepFee}
@@ -900,19 +892,47 @@ export function EvmApp() {
                           onObserved={() => void refreshBalances()}
                         />
                       )}
+                      <WalletStepDetails
+                        plan={prepared}
+                        expired={clock >= quote.expiresAt}
+                      />
                     </section>
                   )}
+                  <details className="evm-price-details">
+                    <summary>Price breakdown</summary>
+                    <p>
+                      Estimated receipt: {quoteAfterFee(quote).amountOut}{" "}
+                      {quoteAfterFee(quote).symbol}. Minimum receipt:{" "}
+                      {quoteAfterFee(quote).minimumOut}{" "}
+                      {quoteAfterFee(quote).symbol}.
+                    </p>
+                    <p>
+                      Blunts fee: {quoteAfterFee(quote).feeAmount}{" "}
+                      {quoteAfterFee(quote).symbol} (1%, already deducted). Pool
+                      fee: {quote.fee / 10000}%. Price tolerance: 0.5%.
+                    </p>
+                    {stepFee?.status === "estimated" && (
+                      <p>
+                        Estimated first network fee:{" "}
+                        {formatUnits(stepFee.estimatedFeeWei, 18)} ETH,
+                        including a 20% gas buffer. Your wallet shows the final
+                        fee.
+                      </p>
+                    )}
+                  </details>
                 </div>
               )}
-              <p className="evm-note">
-                {signingEnabled
-                  ? "Wallet signing is enabled. Approval or swap requests can move real funds only after you approve in your wallet."
-                  : "Preview: wallet approvals and swaps are disabled. No funds will move."}
-              </p>
-              <p className="evm-fine">
-                For eligible users only. Robinhood Stock Tokens are unavailable
-                to US persons and other restricted regions.
-              </p>
+              {!signingEnabled && (
+                <p className="evm-fine">
+                  Preview only. Wallet approvals and swaps are disabled.
+                </p>
+              )}
+              {!prepared && (
+                <p className="evm-fine">
+                  Uses funds already in your wallet. Bank deposits aren't
+                  connected.
+                </p>
+              )}
               {!account && (
                 <button onClick={() => setPanel("wallet")}>
                   Connect wallet to view your balances
