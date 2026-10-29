@@ -1,4 +1,12 @@
-# Owner clarified web-only scope — latest October 28
+# Local web goal audit complete — latest October 28
+
+The authorized local web implementation/qualification is complete as far as it
+can proceed without holder actions. See the completion audit in
+[local wallet acceptance](local-wallet-acceptance.md). This is not mainnet or
+public-launch acceptance: publishing and personal financial actions stay on hold.
+Current web post drafts in `docs/creative-proposals.md` are local and unposted.
+
+# Owner clarified web-only scope — October 28
 
 The owner clarified: use the normal Web3 web app and connect an existing browser
 wallet. Do not require a phone, MetaMask mobile installation, native pairing or

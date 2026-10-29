@@ -1,7 +1,8 @@
 # Blunts creative proposals — deferred
 
-App completion comes first. These are review concepts and drafts, not implemented
-features or published marketing.
+The active product is the Web3 web app. These remain optional review concepts
+and local drafts, not implemented features or published marketing. No native
+mobile app setup is part of this launch direction.
 
 ## Creative directions — proposals only
 
@@ -24,20 +25,41 @@ If cumulative contributions should define progress instead of market value,
 decide that explicitly before implementing milestones. Fees also affect when the
 current visual threshold is crossed.
 
-## Marketing experiments — drafts, not posted
+## Web-app post drafts — not published
 
-- **Six-second loop:** pour → roll → tenth-roll band snap. End with “Roll a better
-  habit.” A small “Local demo · simulated money” label remains legible.
-- **Build-in-public post:** “Shaw left a savings app with an absurdly good rolling
-  animation. I’m finishing it locally. The demo now runs from Fill to cash-out.
-  Here’s the first band.” Attach actual demo footage, not generated UI as evidence.
-- **Product hook:** “Your savings app has a chart. This one has a rolling tray.”
-  Show the interaction immediately; test whether people understand the money flow.
-- **Audience test:** ask adult testers “What do you think Fill and Spark do?” and
-  “Would you share this with your balance hidden?” before expanding onboarding.
-- **Share copy:** “Rolled into a habit. My first band.” Keep the demo label on
-  simulated milestones. Never imply real customer traction or real holdings.
+These drafts describe the implemented local wallet route. Any attached trade
+footage must be labelled "Local fork demo" unless an actual holder/mainnet
+receipt exists. Do not describe stock tokens as ETF share ownership, bank cash-out
+or guaranteed savings. Public distribution still requires owner approval.
 
-The hypothesis is that the ritual earns replays and deliberate sharing. It is
-not evidence of virality, retention, conversion or commercial viability. Measure
-demo completion, comprehension and voluntary shares before paid promotion.
+**Build post:**
+
+> Shaw's rolling-tray idea, now a Web3 web app. Connect your existing EVM wallet,
+> preview USDG ↔ QQQ-token swaps, and review the exact fee before signing.
+> Built and tested locally. Not public yet.
+
+**Short product hook:**
+
+> Your wallet has a balance. This one has a rolling tray.
+> Fill: USDG → QQQ token. Spark: QQQ token → USDG.
+
+**Technical proof post:**
+
+> The animation is the fun part. The transaction details matter too:
+> exact approvals, minimum output, an on-chain deadline, and a 1% fee that
+> succeeds or reverts with the swap. Qualified on a local chain fork.
+
+**Feedback post:**
+
+> Before we launch Blunts: what would you expect Fill and Spark to do?
+> Testing whether the interface explains itself before adding more features.
+
+**Six-second demo plan:** show the original tray → wallet connection → net quote
+and 1% fee → one rolling/banding moment. Use actual labelled local-fork footage,
+never generated UI as transaction proof. End with "Your wallet. Your stash."
+A real money/token example needs its own issuer eligibility disclosures; Robinhood
+stock-token access excludes US persons and other restricted regions.
+
+The hypothesis remains that the ritual earns deliberate replays and sharing.
+There is no evidence here of virality, traction, retention or returns. Optional
+First Band, Pocket Goal and Pass the Habit remain proposals above.
